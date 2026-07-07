@@ -369,10 +369,16 @@ export async function addPlanItem(planId: string, input: PlanItemInput) {
   const data = parsed.data;
 
   try {
+    const plan = await prisma.plan.findUnique({
+      where: { id: planId },
+      select: { productLineTeamId: true },
+    });
+    const productLineTeamId = plan?.productLineTeamId || data.productLineTeamId || null;
+
     const item = await prisma.planItem.create({
       data: {
-        planId,
-        productLineTeamId: data.productLineTeamId ?? null,
+        planId: data.isPlanned ? planId : null,
+        productLineTeamId,
         title: data.title,
         description: data.description ?? null,
         type: data.type ?? WorkItemType.REQUIREMENT,
@@ -399,6 +405,7 @@ export async function addPlanItem(planId: string, input: PlanItemInput) {
     }
 
     revalidatePath(`/plans/${planId}`);
+    revalidatePath("/plans/unplanned");
     return { success: true, data: item };
   } catch (error) {
     console.error("[addPlanItem] 添加计划条目失败:", error);
