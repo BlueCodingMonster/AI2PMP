@@ -289,12 +289,12 @@ export default async function RequirementDetailPage({ params }: PageProps) {
             {/* 归属产品线小组 */}
             <div className="space-y-1">
               <span className="text-[10px] text-muted-foreground uppercase">归属产品线</span>
-              {(req as any).productLineTeam ? (
+              {req.productLineTeam ? (
                 <Link
-                  href={`/product-lines/${(req as any).productLineTeam.id}`}
+                  href={`/product-lines/${req.productLineTeam.id}`}
                   className="block rounded-lg border border-border bg-input/40 px-3 py-2 hover:bg-muted/30 transition-colors"
                 >
-                  <span className="text-xs text-indigo-400 font-semibold">{(req as any).productLineTeam.name}</span>
+                  <span className="text-xs text-indigo-400 font-semibold">{req.productLineTeam.name}</span>
                 </Link>
               ) : (
                 <div className="text-xs text-muted-foreground italic">未关联产品线小组</div>
@@ -305,7 +305,7 @@ export default async function RequirementDetailPage({ params }: PageProps) {
             <div className="space-y-1">
               <span className="text-[10px] text-muted-foreground uppercase">需求提出方</span>
               <div className="text-sm font-semibold text-white">
-                {(req as any).proposer || <span className="text-muted-foreground italic font-normal text-xs">未填写</span>}
+                {req.proposer || <span className="text-muted-foreground italic font-normal text-xs">未填写</span>}
               </div>
             </div>
 
@@ -313,8 +313,8 @@ export default async function RequirementDetailPage({ params }: PageProps) {
             <div className="space-y-1">
               <span className="text-[10px] text-muted-foreground uppercase">需求提出时间</span>
               <div className="text-sm font-semibold text-white">
-                {(req as any).proposedAt
-                  ? format(new Date((req as any).proposedAt), "yyyy-MM-dd", { locale: zhCN })
+                {req.proposedAt
+                  ? format(new Date(req.proposedAt), "yyyy-MM-dd", { locale: zhCN })
                   : <span className="text-muted-foreground italic font-normal text-xs">未记录</span>}
               </div>
             </div>
