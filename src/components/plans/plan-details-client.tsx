@@ -6,6 +6,18 @@ import { useRouter } from "next/navigation";
 import { deletePlan, deletePlanItem } from "@/actions/plans";
 import { PlanStatus, PlanType, PlanItemStatus, WorkItemType, PlanningTreatment } from "@prisma/client";
 import {
+  ArrowLeft,
+  Edit2,
+  Trash2,
+  Plus,
+  Calendar,
+  User,
+  Folder,
+  ArrowRight,
+  TrendingUp,
+  Settings,
+  Layers,
+} from "lucide-react";
 
 const workItemTypeLabels: Record<WorkItemType, string> = {
   REQUIREMENT: "需求",
@@ -24,18 +36,6 @@ const planningTreatmentLabels: Record<PlanningTreatment, string> = {
   MOVE_TO_NEXT: "转入下个月度计划",
   LINK_EXISTING_ITEM: "关联到已有工作项",
 };
-  ArrowLeft,
-  Edit2,
-  Trash2,
-  Plus,
-  Calendar,
-  User,
-  Folder,
-  ArrowRight,
-  TrendingUp,
-  Settings,
-  Layers,
-} from "lucide-react";
 import PlanItemModal from "./plan-item-modal";
 import { format } from "date-fns";
 import { zhCN } from "date-fns/locale";
