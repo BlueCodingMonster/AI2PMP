@@ -701,7 +701,7 @@ export async function getUnplannedWorkItems(productLineTeamId?: string) {
   }
 }
 
-export function summarizePlanItems(items: Array<{ isPlanned: boolean; progress: number; status: string }>) {
+export async function summarizePlanItems(items: Array<{ isPlanned: boolean; progress: number; status: string }>) {
   const plannedItems = items.filter((item) => item.isPlanned);
   const unplannedItems = items.filter((item) => !item.isPlanned);
 
