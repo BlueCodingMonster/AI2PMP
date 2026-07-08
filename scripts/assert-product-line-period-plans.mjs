@@ -48,6 +48,21 @@ expectIncludes(files.actions, "getPlanProductLineOptions", "Plan actions must ex
 expectIncludes(files.actions, "productLineTeam", "Plan actions must include product-line metadata.");
 expectIncludes(files.actions, "halfYear: data.halfYear", "Plan actions must persist halfYear.");
 expectIncludes(files.actions, "productLineTeamId: data.productLineTeamId", "Plan actions must persist productLineTeamId.");
+expectIncludes(
+  files.actions,
+  "planId: nextIsPlanned ? oldItem.planId : null",
+  "Updating a work item to unplanned must clear planId."
+);
+expectIncludes(
+  files.actions,
+  "productLineTeamId: input.productLineTeamId ?? plan.productLineTeamId",
+  "Adding an unplanned item from a plan must validate with the plan product-line team."
+);
+expectIncludes(
+  files.actions,
+  "progress: summary.plannedProgress",
+  "Plan progress must use planned-only progress summary."
+);
 expectMatch(
   files.actions,
   /getParentPlanOptions\([^)]*productLineTeamId/s,
@@ -87,8 +102,8 @@ try {
   if (match) {
     process.env.DATABASE_URL = match[1];
   }
-} catch (e) {
-  // Ignore
+} catch {
+  // Ignore missing local environment file in static-only checks.
 }
 
 const pool = new pg.Pool({

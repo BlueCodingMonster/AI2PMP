@@ -1,0 +1,157 @@
+@import "tailwindcss";
+
+/* ===== 全局暗色主题变量 ===== */
+:root {
+  /* 背景色 - 深海军蓝 */
+  --background: oklch(0.145 0.02 260);
+  --foreground: oklch(0.94 0.01 260);
+
+  /* 主色调 - 靛蓝/紫色 */
+  --primary: oklch(0.55 0.22 270);
+  --primary-hover: oklch(0.60 0.24 270);
+  --primary-foreground: oklch(0.98 0 0);
+
+  /* 卡片 */
+  --card: oklch(0.18 0.02 260);
+  --card-foreground: oklch(0.94 0.01 260);
+
+  /* 静音色 */
+  --muted: oklch(0.25 0.015 260);
+  --muted-foreground: oklch(0.65 0.01 260);
+
+  /* 强调色 */
+  --accent: oklch(0.30 0.04 270);
+  --accent-foreground: oklch(0.94 0.01 260);
+
+  /* 边框 */
+  --border: oklch(0.30 0.02 260);
+  --border-hover: oklch(0.40 0.04 270);
+
+  /* 输入框 */
+  --input: oklch(0.22 0.02 260);
+  --input-focus: oklch(0.55 0.22 270);
+
+  /* 危险色 */
+  --destructive: oklch(0.55 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  /* 成功色 */
+  --success: oklch(0.60 0.18 145);
+
+  /* 警告色 */
+  --warning: oklch(0.70 0.16 80);
+
+  /* 圆角 */
+  --radius: 0.75rem;
+
+  /* 侧边栏 */
+  --sidebar: oklch(0.14 0.02 260);
+  --sidebar-foreground: oklch(0.80 0.01 260);
+  --sidebar-active: oklch(0.55 0.22 270);
+}
+
+/* Tailwind v4 主题令牌注入 */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-border-hover: var(--border-hover);
+  --color-input: var(--input);
+  --color-input-focus: var(--input-focus);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-active: var(--sidebar-active);
+  --radius-base: var(--radius);
+  --font-sans: var(--font-inter);
+}
+
+/* ===== 基础样式 ===== */
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), system-ui, -apple-system, sans-serif;
+}
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--muted);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-hover);
+}
+
+/* ===== 聚焦环样式 ===== */
+*:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ===== 选择高亮 ===== */
+::selection {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+/* ===== 玻璃拟态工具类 ===== */
+.glass {
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* ===== 动画关键帧 ===== */
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-left {
+  from { opacity: 0; transform: translateX(-16px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(99, 102, 241, 0.15); }
+  50% { box-shadow: 0 0 40px rgba(99, 102, 241, 0.3); }
+}
+
+.animate-fade-in {
+  animation: fade-in 0.4s ease-out;
+}
+
+.animate-slide-in {
+  animation: slide-in-left 0.3s ease-out;
+}

@@ -8,7 +8,6 @@ import {
   LayoutDashboard,
   Lightbulb,
   CalendarRange,
-  FolderKanban,
   CheckSquare,
   Bug,
   BarChart3,
@@ -30,7 +29,6 @@ const navItems = [
   { label: "需求池", href: "/requirements", icon: Lightbulb },
   { label: "计划管理", href: "/plans", icon: CalendarRange },
   { label: "计划外工作", href: "/plans/unplanned", icon: AlertTriangle },
-  { label: "项目管理", href: "/projects", icon: FolderKanban },
   { label: "我的任务", href: "/tasks", icon: CheckSquare },
   { label: "甘特图", href: "/gantt", icon: CalendarRange },
   { label: "Bug 跟踪", href: "/bugs", icon: Bug },
@@ -73,7 +71,7 @@ export default function DashboardLayoutClient({
         if (data && typeof data.unreadCount === "number") {
           setUnreadCount(data.unreadCount);
         }
-      } catch (err) {
+      } catch {
         // 忽略心跳或解析失败
       }
     };

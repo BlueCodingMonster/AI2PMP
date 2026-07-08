@@ -18,6 +18,9 @@ import {
   Settings,
   Layers,
 } from "lucide-react";
+import PlanItemModal from "./plan-item-modal";
+import { format } from "date-fns";
+import { zhCN } from "date-fns/locale";
 
 const workItemTypeLabels: Record<WorkItemType, string> = {
   REQUIREMENT: "需求",
@@ -36,9 +39,6 @@ const planningTreatmentLabels: Record<PlanningTreatment, string> = {
   MOVE_TO_NEXT: "转入下个月度计划",
   LINK_EXISTING_ITEM: "关联到已有工作项",
 };
-import PlanItemModal from "./plan-item-modal";
-import { format } from "date-fns";
-import { zhCN } from "date-fns/locale";
 
 const statusMap: Record<PlanStatus, { label: string; className: string }> = {
   DRAFT: { label: "草稿", className: "bg-gray-500/10 text-gray-400 border-gray-500/20" },

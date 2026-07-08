@@ -6,6 +6,26 @@ import { planSchema, PlanInput, planItemSchema, PlanItemInput } from "@/lib/vali
 import { PlanType, PlanStatus, WorkItemType, PlanningTreatment } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
+function summarizePlanItems(items: Array<{ isPlanned: boolean; progress: number }>) {
+  const plannedItems = items.filter((item) => item.isPlanned);
+  const unplannedItems = items.filter((item) => !item.isPlanned);
+
+  const plannedProgress =
+    plannedItems.length > 0
+      ? Math.round(plannedItems.reduce((sum, item) => sum + item.progress, 0) / plannedItems.length)
+      : 0;
+
+  const allCount = items.length;
+  const unplannedShare = allCount > 0 ? Math.round((unplannedItems.length / allCount) * 100) : 0;
+
+  return {
+    plannedCount: plannedItems.length,
+    unplannedCount: unplannedItems.length,
+    plannedProgress,
+    unplannedShare,
+  };
+}
+
 /**
  * 获取所有计划，按类型筛选
  */
@@ -33,6 +53,7 @@ export async function getPlans(type?: PlanType) {
             id: true,
             progress: true,
             status: true,
+            isPlanned: true,
           },
         },
         parentPlan: {
@@ -44,17 +65,13 @@ export async function getPlans(type?: PlanType) {
       },
     });
 
-    // 计算每个计划的平均进度
+    // 计划完成率只统计计划内工作项，计划外工作单独统计。
     const plansWithProgress = plans.map((plan) => {
-      const itemsCount = plan.items.length;
-      let progress = 0;
-      if (itemsCount > 0) {
-        const totalProgress = plan.items.reduce((sum, item) => sum + item.progress, 0);
-        progress = Math.round(totalProgress / itemsCount);
-      }
+      const summary = summarizePlanItems(plan.items);
       return {
         ...plan,
-        progress,
+        progress: summary.plannedProgress,
+        workItemSummary: summary,
       };
     });
 
@@ -80,6 +97,7 @@ export async function getPlansHierarchy() {
           select: {
             id: true,
             progress: true,
+            isPlanned: true,
           },
         },
       },
@@ -92,10 +110,7 @@ export async function getPlansHierarchy() {
 
     // 预计算进度
     const plansMap = allPlans.map(plan => {
-      const itemsCount = plan.items.length;
-      const progress = itemsCount > 0 
-        ? Math.round(plan.items.reduce((sum, i) => sum + i.progress, 0) / itemsCount) 
-        : 0;
+      const summary = summarizePlanItems(plan.items);
       return {
         id: plan.id,
         title: plan.title,
@@ -107,7 +122,8 @@ export async function getPlansHierarchy() {
         halfYear: plan.halfYear,
         productLineTeam: plan.productLineTeam,
         parentPlanId: plan.parentPlanId,
-        progress,
+        progress: summary.plannedProgress,
+        workItemSummary: summary,
       };
     });
 
@@ -221,15 +237,10 @@ export async function getPlanById(id: string) {
       return { success: false, error: "计划不存在" };
     }
 
-    // 计算计划总进度
-    const itemsCount = plan.items.length;
-    let progress = 0;
-    if (itemsCount > 0) {
-      const totalProgress = plan.items.reduce((sum, item) => sum + item.progress, 0);
-      progress = Math.round(totalProgress / itemsCount);
-    }
+    // 计划完成率只统计计划内工作项，计划外工作在详情页单独展示。
+    const summary = summarizePlanItems(plan.items);
 
-    return { success: true, data: { ...plan, progress } };
+    return { success: true, data: { ...plan, progress: summary.plannedProgress, workItemSummary: summary } };
   } catch (error) {
     console.error("[getPlanById] 获取计划详情失败:", error);
     return { success: false, error: "获取计划详情失败" };
@@ -361,19 +372,25 @@ export async function addPlanItem(planId: string, input: PlanItemInput) {
     return { success: false, error: "未登录，无权操作" };
   }
 
-  const parsed = planItemSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0]?.message ?? "输入数据不合法" };
-  }
-
-  const data = parsed.data;
-
   try {
     const plan = await prisma.plan.findUnique({
       where: { id: planId },
       select: { productLineTeamId: true },
     });
-    const productLineTeamId = plan?.productLineTeamId || data.productLineTeamId || null;
+    if (!plan) {
+      return { success: false, error: "计划不存在" };
+    }
+
+    const parsed = planItemSchema.safeParse({
+      ...input,
+      productLineTeamId: input.productLineTeamId ?? plan.productLineTeamId,
+    });
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0]?.message ?? "输入数据不合法" };
+    }
+
+    const data = parsed.data;
+    const productLineTeamId = data.productLineTeamId ?? plan.productLineTeamId;
 
     const item = await prisma.planItem.create({
       data: {
@@ -465,17 +482,30 @@ export async function updatePlanItem(itemId: string, input: PlanItemInput) {
     return { success: false, error: "未登录，无权操作" };
   }
 
-  const parsed = planItemSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0]?.message ?? "输入数据不合法" };
-  }
-
-  const data = parsed.data;
-
   try {
     const oldItem = await prisma.planItem.findUnique({
       where: { id: itemId },
+      include: {
+        plan: {
+          select: { id: true, productLineTeamId: true },
+        },
+      },
     });
+    if (!oldItem) {
+      return { success: false, error: "工作项不存在" };
+    }
+
+    const productLineTeamId = input.productLineTeamId ?? oldItem.productLineTeamId ?? oldItem.plan?.productLineTeamId ?? null;
+    const parsed = planItemSchema.safeParse({
+      ...input,
+      productLineTeamId,
+    });
+    if (!parsed.success) {
+      return { success: false, error: parsed.error.errors[0]?.message ?? "输入数据不合法" };
+    }
+
+    const data = parsed.data;
+    const nextIsPlanned = data.isPlanned ?? oldItem.isPlanned;
 
     const updated = await prisma.planItem.update({
       where: { id: itemId },
@@ -483,9 +513,10 @@ export async function updatePlanItem(itemId: string, input: PlanItemInput) {
         title: data.title,
         description: data.description ?? null,
         type: data.type ?? undefined,
-        isPlanned: data.isPlanned ?? undefined,
-        planningTreatment: data.planningTreatment ?? null,
-        productLineTeamId: data.productLineTeamId ?? null,
+        isPlanned: nextIsPlanned,
+        planId: nextIsPlanned ? oldItem.planId : null,
+        planningTreatment: nextIsPlanned ? null : data.planningTreatment ?? null,
+        productLineTeamId,
         relatedPlanItemId: data.relatedPlanItemId ?? null,
         requirementId: data.requirementId ?? null,
         projectId: data.projectId ?? null,
@@ -506,7 +537,10 @@ export async function updatePlanItem(itemId: string, input: PlanItemInput) {
       });
     }
 
-    if (updated.planId) {
+    if (oldItem.planId) {
+      revalidatePath(`/plans/${oldItem.planId}`);
+    }
+    if (updated.planId && updated.planId !== oldItem.planId) {
       revalidatePath(`/plans/${updated.planId}`);
     }
     revalidatePath("/plans/unplanned");
@@ -699,24 +733,4 @@ export async function getUnplannedWorkItems(productLineTeamId?: string) {
     console.error("[getUnplannedWorkItems] 获取计划外工作失败:", error);
     return { success: false, error: "获取计划外工作失败", data: [] };
   }
-}
-
-export async function summarizePlanItems(items: Array<{ isPlanned: boolean; progress: number; status: string }>) {
-  const plannedItems = items.filter((item) => item.isPlanned);
-  const unplannedItems = items.filter((item) => !item.isPlanned);
-
-  const plannedProgress =
-    plannedItems.length > 0
-      ? Math.round(plannedItems.reduce((sum, item) => sum + item.progress, 0) / plannedItems.length)
-      : 0;
-
-  const allCount = items.length;
-  const unplannedShare = allCount > 0 ? Math.round((unplannedItems.length / allCount) * 100) : 0;
-
-  return {
-    plannedCount: plannedItems.length,
-    unplannedCount: unplannedItems.length,
-    plannedProgress,
-    unplannedShare,
-  };
 }
