@@ -28,6 +28,7 @@ const navItems = [
   { label: "仪表盘", href: "/", icon: LayoutDashboard },
   { label: "需求池", href: "/requirements", icon: Lightbulb },
   { label: "计划管理", href: "/plans", icon: CalendarRange },
+  { label: "计划总览", href: "/plans/overview", icon: BarChart3 },
   { label: "计划外工作", href: "/plans/unplanned", icon: AlertTriangle },
   { label: "我的任务", href: "/tasks", icon: CheckSquare },
   { label: "甘特图", href: "/gantt", icon: CalendarRange },

@@ -84,8 +84,10 @@ enum PlanStatus {
   DRAFT       // 草稿
   PUBLISHED   // 已发布
   IN_PROGRESS // 进行中
+  ADJUSTED    // 已调整
   COMPLETED   // 已完成
-  CANCELLED   // 已取消
+  CANCELLED   // 已作废
+  ARCHIVED    // 已归档
 }
 
 /// 计划条目状态
@@ -114,6 +116,46 @@ enum PlanningTreatment {
   ADD_TO_CURRENT     // 补入当前月度计划
   MOVE_TO_NEXT       // 转入下个月度计划
   LINK_EXISTING_ITEM // 关联到已有工作项
+}
+
+/// 工作来源
+enum WorkItemSource {
+  PLATFORM_RND   // 平台研发规划
+  LOCAL_DELIVERY // 本地化项目交付
+  UNPLANNED      // 计划外工作
+}
+
+/// 执行流程模板
+enum ExecutionFlowTemplate {
+  NONE                  // 不使用流程模板
+  INTERNAL_RND          // 内部研发管理流程
+  LOCAL_DEPLOYMENT      // 本地化部署流程
+  DATA_MIGRATION        // 数据迁移流程
+  SYSTEM_INTEGRATION    // 系统对接流程
+  ONSITE_IMPLEMENTATION // 现场实施流程
+}
+
+/// 专项任务类型
+enum SpecialTaskCategory {
+  TECH_RESEARCH         // 技术研究
+  SCENARIO_VALIDATION   // 场景验证
+  INTELLECTUAL_PROPERTY // 知识产权
+}
+
+/// 知识产权子类型
+enum IntellectualPropertyType {
+  PATENT             // 专利
+  SOFTWARE_COPYRIGHT // 软著
+  STANDARD           // 标准
+}
+
+/// 阶段所属环节
+enum StageGroup {
+  PRODUCT      // 产品环节
+  DEVELOPMENT  // 研发环节
+  TEST_RELEASE // 测试与发布环节
+  DELIVERY     // 项目交付环节
+  OTHER        // 其他
 }
 
 
@@ -217,6 +259,7 @@ model User {
   createdRequirements  Requirement[]   @relation("RequirementCreator")
   createdPlans         Plan[]
   assignedPlanItems    PlanItem[]
+  assignedPlanItemStages PlanItemStage[]
   assignedTasks        Task[]          @relation("TaskAssignee")
   createdTasks         Task[]          @relation("TaskCreator")
   assignedBugs         Bug[]           @relation("BugAssignee")
@@ -345,6 +388,11 @@ model Plan {
   startDate    DateTime
   endDate      DateTime
   parentPlanId String?    // 父计划 ID，用于计划层级关系
+  sourcePlanId      String?
+  replacementPlanId String?
+  adjustedReason    String?   @db.Text
+  voidedReason      String?   @db.Text
+  voidedAt          DateTime?
   goals        String?    @db.Text // 计划目标描述
   productLineTeamId String
   createdById  String
@@ -354,6 +402,10 @@ model Plan {
   // 关联关系（自关联：父子计划）
   parentPlan Plan?  @relation("PlanHierarchy", fields: [parentPlanId], references: [id], onDelete: SetNull)
   childPlans Plan[] @relation("PlanHierarchy")
+  sourcePlan      Plan?  @relation("PlanSource", fields: [sourcePlanId], references: [id], onDelete: SetNull)
+  derivedPlans    Plan[] @relation("PlanSource")
+  replacementPlan Plan?  @relation("PlanReplacement", fields: [replacementPlanId], references: [id], onDelete: SetNull)
+  replacedPlans   Plan[] @relation("PlanReplacement")
   productLineTeam ProductLineTeam @relation(fields: [productLineTeamId], references: [id])
   createdBy  User   @relation(fields: [createdById], references: [id])
   items      PlanItem[]
@@ -362,6 +414,8 @@ model Plan {
   @@index([type])
   @@index([year])
   @@index([parentPlanId])
+  @@index([sourcePlanId])
+  @@index([replacementPlanId])
   @@index([productLineTeamId])
   @@index([createdById])
   @@map("plans")
@@ -375,6 +429,15 @@ model PlanItem {
   title         String
   description   String?        @db.Text
   type          WorkItemType   @default(REQUIREMENT)
+  source              WorkItemSource        @default(PLATFORM_RND)
+  executionFlow       ExecutionFlowTemplate @default(NONE)
+  versionNameText     String?
+  specialTaskCategory SpecialTaskCategory?
+  ipType              IntellectualPropertyType?
+  specialSerialNo     String?
+  specialTarget       String?               @db.Text
+  specialOwnerText    String?
+  plannedFinishText   String?
   isPlanned     Boolean        @default(true)
   planningTreatment PlanningTreatment?
   relatedPlanItemId String?
@@ -399,10 +462,15 @@ model PlanItem {
   productVersion ProductVersion? @relation(fields: [productVersionId], references: [id], onDelete: SetNull)
   task        Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
   assignee    User?        @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  stages      PlanItemStage[]
 
   @@index([planId])
   @@index([productLineTeamId])
   @@index([type])
+  @@index([source])
+  @@index([executionFlow])
+  @@index([specialTaskCategory])
+  @@index([ipType])
   @@index([isPlanned])
   @@index([planningTreatment])
   @@index([relatedPlanItemId])
@@ -413,6 +481,32 @@ model PlanItem {
   @@index([productVersionId])
   @@index([taskId])
   @@map("plan_items")
+}
+
+/// 工作项阶段安排
+model PlanItemStage {
+  id          String         @id @default(cuid())
+  planItemId  String
+  group       StageGroup
+  name        String
+  isMilestone Boolean        @default(false)
+  status      PlanItemStatus @default(TODO)
+  plannedTime String?
+  assigneeId  String?
+  sortOrder   Int            @default(0)
+  note        String?        @db.Text
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  planItem PlanItem @relation(fields: [planItemId], references: [id], onDelete: Cascade)
+  assignee User?    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([planItemId])
+  @@index([group])
+  @@index([isMilestone])
+  @@index([status])
+  @@index([assigneeId])
+  @@map("plan_item_stages")
 }
 
 /// 任务模型 - 项目中的具体任务

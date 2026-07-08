@@ -22,6 +22,11 @@ interface PlanFormProps {
     startDate?: Date | string;
     endDate?: Date | string;
     parentPlanId?: string | null;
+    sourcePlanId?: string | null;
+    replacementPlanId?: string | null;
+    adjustedReason?: string | null;
+    voidedReason?: string | null;
+    voidedAt?: Date | string | null;
     goals?: string | null;
   };
 }
@@ -85,6 +90,8 @@ export default function PlanForm({ initialData }: PlanFormProps) {
     initialData?.endDate ? formatLocalDate(initialData.endDate) : ""
   );
   const [parentPlanId, setParentPlanId] = useState<string>(initialData?.parentPlanId || "");
+  const [adjustedReason, setAdjustedReason] = useState(initialData?.adjustedReason || "");
+  const [voidedReason, setVoidedReason] = useState(initialData?.voidedReason || "");
   const [goals, setGoals] = useState(initialData?.goals || "");
 
   const [productLineOptions, setProductLineOptions] = useState<ProductLineOption[]>([]);
@@ -200,7 +207,7 @@ export default function PlanForm({ initialData }: PlanFormProps) {
       status,
       productLineTeamId,
       year: Number(year),
-      halfYear: type === PlanType.HALF_YEAR ? Number(halfYear) : undefined,
+      halfYear: undefined,
       quarter:
         type === PlanType.QUARTERLY
           ? Number(quarter)
@@ -211,6 +218,9 @@ export default function PlanForm({ initialData }: PlanFormProps) {
       startDate: new Date(startDate),
       endDate: new Date(endDate),
       parentPlanId: parentPlanId || undefined,
+      adjustedReason: adjustedReason.trim() || undefined,
+      voidedReason: voidedReason.trim() || undefined,
+      voidedAt: status === PlanStatus.CANCELLED ? new Date() : undefined,
       goals: goals.trim() || undefined,
     };
 
@@ -277,8 +287,10 @@ export default function PlanForm({ initialData }: PlanFormProps) {
               <option value={PlanStatus.DRAFT}>草稿</option>
               <option value={PlanStatus.PUBLISHED}>已发布</option>
               <option value={PlanStatus.IN_PROGRESS}>进行中</option>
+              <option value={PlanStatus.ADJUSTED}>已调整</option>
               <option value={PlanStatus.COMPLETED}>已完成</option>
-              <option value={PlanStatus.CANCELLED}>已取消</option>
+              <option value={PlanStatus.CANCELLED}>已作废</option>
+              <option value={PlanStatus.ARCHIVED}>已归档</option>
             </select>
           </div>
         </div>
@@ -295,7 +307,6 @@ export default function PlanForm({ initialData }: PlanFormProps) {
               className="w-full rounded-lg border border-border bg-input py-2.5 px-3 text-sm text-white focus:border-primary focus:outline-none"
             >
               <option value={PlanType.ANNUAL}>年度计划</option>
-              <option value={PlanType.HALF_YEAR}>半年计划</option>
               <option value={PlanType.QUARTERLY}>季度计划</option>
               <option value={PlanType.MONTHLY}>月度计划</option>
             </select>
@@ -391,6 +402,36 @@ export default function PlanForm({ initialData }: PlanFormProps) {
                 </option>
               ))}
             </select>
+          </div>
+        )}
+
+        {status === PlanStatus.ADJUSTED && (
+          <div className="space-y-1.5">
+            <label htmlFor="adjustedReason" className="block text-xs font-medium text-muted-foreground">
+              调整原因
+            </label>
+            <textarea
+              id="adjustedReason"
+              rows={2}
+              value={adjustedReason}
+              onChange={(e) => setAdjustedReason(e.target.value)}
+              className="w-full rounded-lg border border-border bg-input py-2.5 px-4 text-sm text-white placeholder-muted-foreground focus:border-primary focus:outline-none resize-y"
+            />
+          </div>
+        )}
+
+        {status === PlanStatus.CANCELLED && (
+          <div className="space-y-1.5">
+            <label htmlFor="voidedReason" className="block text-xs font-medium text-muted-foreground">
+              作废原因
+            </label>
+            <textarea
+              id="voidedReason"
+              rows={2}
+              value={voidedReason}
+              onChange={(e) => setVoidedReason(e.target.value)}
+              className="w-full rounded-lg border border-border bg-input py-2.5 px-4 text-sm text-white placeholder-muted-foreground focus:border-primary focus:outline-none resize-y"
+            />
           </div>
         )}
 

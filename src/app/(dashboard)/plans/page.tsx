@@ -7,8 +7,10 @@ const statusMap: Record<PlanStatus, { label: string; className: string }> = {
   DRAFT: { label: "草稿", className: "bg-gray-500/10 text-gray-400 border-gray-500/20" },
   PUBLISHED: { label: "已发布", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
   IN_PROGRESS: { label: "进行中", className: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
+  ADJUSTED: { label: "已调整", className: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
   COMPLETED: { label: "已完成", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-  CANCELLED: { label: "已取消", className: "bg-rose-500/10 text-rose-400 border-rose-500/20" },
+  CANCELLED: { label: "已作废", className: "bg-rose-500/10 text-rose-400 border-rose-500/20" },
+  ARCHIVED: { label: "已归档", className: "bg-slate-500/10 text-slate-400 border-slate-500/20" },
 };
 
 const typeLabels: Record<PlanType, string> = {
@@ -50,25 +52,21 @@ export default async function PlansPage({ searchParams }: PageProps) {
   const params = await searchParams;
   const activeTab = params.tab || "all";
 
-  const [allRes, annualRes, halfYearRes, quarterlyRes, monthlyRes] = await Promise.all([
+  const [allRes, annualRes, quarterlyRes, monthlyRes] = await Promise.all([
     getPlans(),
     getPlans(PlanType.ANNUAL),
-    getPlans(PlanType.HALF_YEAR),
     getPlans(PlanType.QUARTERLY),
     getPlans(PlanType.MONTHLY),
   ]);
 
   const allPlans = allRes.success ? allRes.data : [];
   const annualPlans = annualRes.success ? annualRes.data : [];
-  const halfYearPlans = halfYearRes.success ? halfYearRes.data : [];
   const quarterlyPlans = quarterlyRes.success ? quarterlyRes.data : [];
   const monthlyPlans = monthlyRes.success ? monthlyRes.data : [];
 
   const currentPlans =
     activeTab === "annual"
       ? annualPlans
-      : activeTab === "half-year"
-      ? halfYearPlans
       : activeTab === "quarterly"
       ? quarterlyPlans
       : activeTab === "monthly"
@@ -111,9 +109,6 @@ export default async function PlansPage({ searchParams }: PageProps) {
         </Link>
         <Link href="?tab=annual" className={tabClass("annual")}>
           年度计划 ({annualPlans.length})
-        </Link>
-        <Link href="?tab=half-year" className={tabClass("half-year")}>
-          半年计划 ({halfYearPlans.length})
         </Link>
         <Link href="?tab=quarterly" className={tabClass("quarterly")}>
           季度计划 ({quarterlyPlans.length})

@@ -4,7 +4,25 @@ import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { deletePlan, deletePlanItem } from "@/actions/plans";
-import { PlanStatus, PlanType, PlanItemStatus, WorkItemType, PlanningTreatment } from "@prisma/client";
+import {
+  ExecutionFlowTemplate,
+  IntellectualPropertyType,
+  PlanStatus,
+  PlanType,
+  PlanItemStatus,
+  PlanningTreatment,
+  SpecialTaskCategory,
+  StageGroup,
+  WorkItemSource,
+  WorkItemType,
+} from "@prisma/client";
+import {
+  executionFlowLabels,
+  intellectualPropertyTypeLabels,
+  specialTaskCategoryLabels,
+  stageGroupLabels,
+  workItemSourceLabels,
+} from "@/lib/plans/workflow-templates";
 import {
   ArrowLeft,
   Edit2,
@@ -44,8 +62,10 @@ const statusMap: Record<PlanStatus, { label: string; className: string }> = {
   DRAFT: { label: "草稿", className: "bg-gray-500/10 text-gray-400 border-gray-500/20" },
   PUBLISHED: { label: "已发布", className: "bg-blue-500/10 text-blue-400 border-blue-500/20" },
   IN_PROGRESS: { label: "进行中", className: "bg-indigo-500/10 text-indigo-400 border-indigo-500/20" },
+  ADJUSTED: { label: "已调整", className: "bg-amber-500/10 text-amber-400 border-amber-500/20" },
   COMPLETED: { label: "已完成", className: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20" },
-  CANCELLED: { label: "已取消", className: "bg-rose-500/10 text-rose-400 border-rose-500/20" },
+  CANCELLED: { label: "已作废", className: "bg-rose-500/10 text-rose-400 border-rose-500/20" },
+  ARCHIVED: { label: "已归档", className: "bg-slate-500/10 text-slate-400 border-slate-500/20" },
 };
 
 const itemStatusMap: Record<PlanItemStatus, { label: string; className: string }> = {
@@ -103,6 +123,15 @@ type PlanItemDetails = {
   title: string;
   description?: string | null;
   type: WorkItemType;
+  source: WorkItemSource;
+  executionFlow: ExecutionFlowTemplate;
+  versionNameText?: string | null;
+  specialTaskCategory?: SpecialTaskCategory | null;
+  ipType?: IntellectualPropertyType | null;
+  specialSerialNo?: string | null;
+  specialTarget?: string | null;
+  specialOwnerText?: string | null;
+  plannedFinishText?: string | null;
   isPlanned: boolean;
   planningTreatment?: PlanningTreatment | null;
   relatedPlanItem?: { id: string; title: string; status: PlanItemStatus; progress: number } | null;
@@ -117,6 +146,15 @@ type PlanItemDetails = {
     productModule: { name: string; productPlatform: { name: string } };
   } | null;
   assignee?: { id: string; name: string } | null;
+  stages?: Array<{
+    id: string;
+    group: StageGroup;
+    name: string;
+    isMilestone: boolean;
+    status: PlanItemStatus;
+    plannedTime?: string | null;
+    assignee?: { id: string; name: string } | null;
+  }>;
   status: PlanItemStatus;
   progress: number;
 };
@@ -288,6 +326,14 @@ export default function PlanDetailsClient({
                           <span className="rounded bg-indigo-500/10 px-2 py-0.5 font-medium text-indigo-400 border border-indigo-500/20">
                             {workItemTypeLabels[item.type]}
                           </span>
+                          <span className="rounded bg-cyan-500/10 px-2 py-0.5 font-medium text-cyan-400 border border-cyan-500/20">
+                            {workItemSourceLabels[item.source]}
+                          </span>
+                          {item.executionFlow !== ExecutionFlowTemplate.NONE && (
+                            <span className="rounded bg-purple-500/10 px-2 py-0.5 font-medium text-purple-400 border border-purple-500/20">
+                              {executionFlowLabels[item.executionFlow]}
+                            </span>
+                          )}
                           <span
                             className={`rounded px-2 py-0.5 font-medium border ${
                               item.isPlanned
@@ -353,6 +399,39 @@ export default function PlanDetailsClient({
                             [{item.productVersion.productModule.productPlatform.name} / {item.productVersion.productModule.name}]{" "}
                             {item.productVersion.title} {item.productVersion.version}
                           </span>
+                        </div>
+                      )}
+                      {!item.productVersion && item.versionNameText && (
+                        <div className="flex items-center gap-1">
+                          <span>版本:</span>
+                          <span className="text-white font-medium">{item.versionNameText}</span>
+                        </div>
+                      )}
+                      {item.specialTaskCategory && (
+                        <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs text-muted-foreground space-y-1">
+                          <div className="flex flex-wrap gap-2">
+                            <span className="font-medium text-white">{specialTaskCategoryLabels[item.specialTaskCategory]}</span>
+                            {item.ipType && <span>{intellectualPropertyTypeLabels[item.ipType]}</span>}
+                            {item.specialSerialNo && <span>编号: {item.specialSerialNo}</span>}
+                            {item.plannedFinishText && <span>完成时间: {item.plannedFinishText}</span>}
+                            {item.specialOwnerText && <span>承担: {item.specialOwnerText}</span>}
+                          </div>
+                          {item.specialTarget && <div className="text-foreground/80">目标: {item.specialTarget}</div>}
+                        </div>
+                      )}
+                      {item.stages && item.stages.length > 0 && (
+                        <div className="rounded-lg border border-border/60 bg-black/10 p-3 text-xs">
+                          <div className="mb-2 font-medium text-white">流程阶段</div>
+                          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                            {item.stages.map((stage) => (
+                              <div key={stage.id} className="flex items-center justify-between gap-2 rounded bg-muted/20 px-2 py-1.5">
+                                <span className="text-muted-foreground">
+                                  {stageGroupLabels[stage.group]} / {stage.name}
+                                </span>
+                                {stage.isMilestone && <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-[10px] text-amber-400">里程碑</span>}
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       )}
                       {item.assignee && (
