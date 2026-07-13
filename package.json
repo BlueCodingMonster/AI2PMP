@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "assert:requirements": "node scripts/assert-requirement-pool-simplification.mjs && node scripts/assert-requirements-table-columns.mjs",
-    "assert:plans": "node scripts/assert-product-line-period-plans.mjs",
+    "assert:plans": "node scripts/assert-quarterly-monthly-plans.mjs",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
