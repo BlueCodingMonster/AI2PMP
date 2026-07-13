@@ -6,16 +6,17 @@ const headerMatches = [...source.matchAll(/<th[^>]*>([^<]+)<\/th>/g)];
 const headers = headerMatches.map((match) => match[1].trim());
 
 const expectedHeaders = [
-  "需求标题",
-  "状态",
-  "类型",
-  "来源",
+  "需求编号",
+  "需求名称",
+  "归属产品线",
   "优先级",
-  "价值/复杂度",
-  "产品线",
-  "提出方",
-  "负责人",
+  "需求来源",
+  "客户名称或需求方",
+  "提出时间",
   "创建时间",
+  "创建人",
+  "需求状态",
+  "评审通过时间",
   "操作",
 ];
 
