@@ -1,0 +1,2 @@
+import { redirect } from "next/navigation";import { getMonthlyPlanFormContext } from "@/actions/monthly-plans";import MonthlyPlanForm from "@/components/plans/monthly-plan-form";
+export default async function NewMonthlyPlanPage(){const result=await getMonthlyPlanFormContext();if(!result.success||!result.data||result.data.manageableTeams.length===0)redirect("/plans?tab=monthly");return <div className="space-y-6"><h1 className="text-2xl font-bold text-white">制定月度项目经营计划</h1><MonthlyPlanForm teams={result.data.manageableTeams}/></div>}

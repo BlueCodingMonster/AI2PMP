@@ -12,6 +12,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { registerUser } from "@/actions/auth";
+import SdlcIcon from "@/components/ui/sdlc-icon";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -78,16 +79,16 @@ export default function RegisterPage() {
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center max-w-md w-full mx-auto">
       {/* 品牌区域 */}
       <div className="mb-8 text-center">
-        <div className="mb-3 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/25">
-          <UserPlus className="h-7 w-7 text-white" />
+        <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.02] border border-white/10 shadow-lg shadow-black/20 backdrop-blur-md hover:scale-105 transition-transform duration-300">
+          <SdlcIcon size={56} colored={true} />
         </div>
         <h1 className="text-2xl font-bold tracking-tight text-white">
-          AI2PmP
+          SDLC
         </h1>
-        <p className="mt-1 text-sm text-muted-foreground">研发项目管理系统</p>
+        <p className="mt-1 text-sm text-muted-foreground">研发效能平台</p>
       </div>
 
       {/* 注册卡片 */}

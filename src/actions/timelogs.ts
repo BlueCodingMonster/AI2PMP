@@ -2,68 +2,21 @@
 
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
-import { revalidatePath } from "next/cache";
+import { ManagedTaskStatus } from "@prisma/client";
 
 /**
- * 记录任务工时
+ * 格式化本地日期 (YYYY-MM-DD)
  */
-export async function addTimeLog(
-  taskId: string,
-  hours: number,
-  logDate: string | Date,
-  description?: string
-) {
-  const session = await auth();
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录，无权操作" };
-  }
-
-  if (hours <= 0 || hours > 24) {
-    return { success: false, error: "单次登记工时必须在 0 到 24 小时之间" };
-  }
-
-  try {
-    const log = await prisma.timeLog.create({
-      data: {
-        taskId,
-        userId: session.user.id,
-        hours: Number(hours),
-        description: description?.trim() || null,
-        logDate: new Date(logDate),
-      },
-    });
-
-    revalidatePath(`/tasks/${taskId}`);
-    revalidatePath("/reports");
-    return { success: true, data: log };
-  } catch (error) {
-    console.error("[addTimeLog] 登记工时失败:", error);
-    return { success: false, error: "登记工时失败" };
-  }
+function formatLocalDate(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 /**
- * 获取任务的所有工时登记记录
- */
-export async function getTimeLogsForTask(taskId: string) {
-  try {
-    const logs = await prisma.timeLog.findMany({
-      where: { taskId },
-      orderBy: { logDate: "desc" },
-      include: {
-        user: { select: { id: true, name: true } },
-      },
-    });
-    return { success: true, data: logs };
-  } catch (error) {
-    console.error("[getTimeLogsForTask] 获取工时记录失败:", error);
-    return { success: false, error: "获取工时记录失败", data: [] };
-  }
-}
-
-/**
- * 获取报表统计摘要数据
- * 包含：项目工时分布、近7天工时走势、最近10条登账记录
+ * 获取报表统计数据 (由原项目工时报表改版为 WBS 任务开发工时报表)
+ * 包含：团队WBS工时分布、近7天任务完工工时走势、最近10条状态变更日志
  */
 export async function getTimeLogsSummary() {
   try {
@@ -72,64 +25,78 @@ export async function getTimeLogsSummary() {
       return { success: false, error: "未登录，无权操作" };
     }
 
-    // 1. 获取最近 10 条登账记录
-    const recentLogs = await prisma.timeLog.findMany({
+    // 1. 获取最近 10 条任务状态变更记录 (作为登账/动态记录)
+    const recentLogs = await prisma.managedTaskStatusLog.findMany({
       take: 10,
-      orderBy: { createdAt: "desc" },
+      orderBy: { changedAt: "desc" },
       include: {
-        user: { select: { name: true } },
+        changedBy: { select: { name: true } },
         task: {
           select: {
             title: true,
-            project: { select: { name: true, key: true } },
+            actualWorkdays: true,
+            productLineTeam: { select: { name: true } },
           },
         },
       },
     });
 
-    // 2. 项目工时分布统计 (按项目分组汇总工时)
-    const logsWithProject = await prisma.timeLog.findMany({
+    // 2. 团队 WBS 工时（人天）分布统计
+    // 汇总结算所有状态为 DONE 的叶子任务的实际工作人天 (actualWorkdays)
+    const completedTasks = await prisma.managedTask.findMany({
+      where: {
+        status: ManagedTaskStatus.DONE,
+        children: { none: {} }, // 仅统计叶子任务
+      },
       include: {
-        task: {
+        productLineTeam: {
           select: {
-            project: { select: { id: true, name: true, key: true } },
+            id: true,
+            name: true,
           },
         },
       },
     });
 
-    const projectHoursMap: Record<string, { name: string; key: string; hours: number }> = {};
-    let totalHours = 0;
+    const teamHoursMap: Record<string, { name: string; key: string; hours: number }> = {};
+    let totalWorkdays = 0;
 
-    logsWithProject.forEach((log) => {
-      const proj = log.task.project;
-      totalHours += log.hours;
-      if (!projectHoursMap[proj.id]) {
-        projectHoursMap[proj.id] = {
-          name: proj.name,
-          key: proj.key,
+    completedTasks.forEach((task) => {
+      const team = task.productLineTeam;
+      const workdays = task.actualWorkdays || 0;
+      totalWorkdays += workdays;
+
+      if (!teamHoursMap[team.id]) {
+        teamHoursMap[team.id] = {
+          name: team.name,
+          key: team.id,
           hours: 0,
         };
       }
-      projectHoursMap[proj.id].hours += log.hours;
+      teamHoursMap[team.id].hours += workdays;
     });
 
-    const projectDistribution = Object.values(projectHoursMap);
+    // 为兼容 ReportsClient UI (其需要 hours 字段)，我们将 WBS 实际工作日 (人天) 返回为 hours
+    const projectDistribution = Object.values(teamHoursMap);
 
-    // 3. 近 7 天工时统计走势
+    // 3. 近 7 天任务完工工时（人天）走势
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 6);
     sevenDaysAgo.setHours(0, 0, 0, 0);
 
-    const recent7DaysLogs = await prisma.timeLog.findMany({
+    const recent7DaysStatusLogs = await prisma.managedTaskStatusLog.findMany({
       where: {
-        logDate: {
+        toStatus: ManagedTaskStatus.DONE,
+        changedAt: {
           gte: sevenDaysAgo,
         },
       },
-      select: {
-        hours: true,
-        logDate: true,
+      include: {
+        task: {
+          select: {
+            actualWorkdays: true,
+          },
+        },
       },
     });
 
@@ -142,10 +109,10 @@ export async function getTimeLogsSummary() {
       dailyHoursMap[dateStr] = 0;
     }
 
-    recent7DaysLogs.forEach((log) => {
-      const dateStr = formatLocalDate(log.logDate);
+    recent7DaysStatusLogs.forEach((log) => {
+      const dateStr = formatLocalDate(log.changedAt);
       if (dailyHoursMap[dateStr] !== undefined) {
-        dailyHoursMap[dateStr] += log.hours;
+        dailyHoursMap[dateStr] += log.task.actualWorkdays || 0;
       }
     });
 
@@ -154,25 +121,33 @@ export async function getTimeLogsSummary() {
       .map(([date, hours]) => ({ date, hours }))
       .reverse();
 
+    // 数据格式适配前端报表组件
+    const formattedRecentLogs = recentLogs.map((log) => ({
+      id: log.id,
+      hours: log.task.actualWorkdays || 0,
+      logDate: log.changedAt,
+      description: `将任务状态由 [${log.fromStatus || "未知"}] 变更为 [${log.toStatus}]${log.note ? ` (${log.note})` : ""}`,
+      user: { name: log.changedBy.name },
+      task: {
+        title: log.task.title,
+        project: {
+          name: log.task.productLineTeam.name,
+          key: "WBS",
+        },
+      },
+    }));
+
     return {
       success: true,
       data: {
-        totalHours,
+        totalHours: totalWorkdays, // 实际总人天数，映射为前端 UI 的工时数
         projectDistribution,
         dailyTrend,
-        recentLogs,
+        recentLogs: formattedRecentLogs,
       },
     };
   } catch (error) {
     console.error("[getTimeLogsSummary] 获取报表摘要失败:", error);
-    return { success: false, error: "获取报表摘要失败" };
+    return { success: false, error: "获取报表摘要失败", data: null };
   }
-}
-
-// 格式化 YYYY-MM-DD
-function formatLocalDate(date: Date) {
-  const d = new Date(date);
-  const m = `${d.getMonth() + 1}`.padStart(2, "0");
-  const day = `${d.getDate()}`.padStart(2, "0");
-  return `${m}/${day}`; // 展示格式为 MM/DD
 }

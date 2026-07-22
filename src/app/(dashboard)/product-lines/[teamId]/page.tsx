@@ -2,13 +2,12 @@ import {
   getEligibleUsersForTeam,
   getProductLineTeamById,
   getProductLineTeams,
-  getProductVersionTree,
+  getProductTree,
 } from "@/actions/product-lines";
 import { getProjectsList } from "@/actions/requirements";
 import { auth } from "@/lib/auth";
 import { notFound, redirect } from "next/navigation";
 import TeamDetailsClient from "@/components/product-lines/team-details-client";
-import ProductVersionsManager from "@/components/product-lines/product-versions-manager";
 import { Layers } from "lucide-react";
 
 interface TeamDetailPageProps {
@@ -26,12 +25,12 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
   const { teamId } = await params;
 
   // 并行获取小组详情、可候选人员、项目和小组（供借调选择）
-  const [teamResult, usersResult, projectsResult, teamsResult, versionTreeResult] = await Promise.all([
+  const [teamResult, usersResult, projectsResult, teamsResult, productsResult] = await Promise.all([
     getProductLineTeamById(teamId),
     getEligibleUsersForTeam(teamId),
     getProjectsList(),
     getProductLineTeams(),
-    getProductVersionTree(teamId),
+    getProductTree(),
   ]);
 
   if (!teamResult.success || !teamResult.data) {
@@ -42,7 +41,7 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
   const allUsers = usersResult.success ? usersResult.data : [];
   const allProjects = projectsResult.success ? projectsResult.data : [];
   const allTeams = teamsResult.success ? teamsResult.data : [];
-  const versionTree = versionTreeResult.success ? versionTreeResult.data : [];
+  const allProducts = productsResult.success ? productsResult.data : [];
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -60,9 +59,8 @@ export default async function TeamDetailPage({ params }: TeamDetailPageProps) {
         allUsers={allUsers}
         allProjects={allProjects}
         allTeams={allTeams}
+        allProducts={allProducts}
       />
-
-      <ProductVersionsManager teamId={team.id} versionTree={versionTree} />
     </div>
   );
 }

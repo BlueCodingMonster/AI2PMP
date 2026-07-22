@@ -2,17 +2,18 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
+import SdlcIcon from "@/components/ui/sdlc-icon";
+import { globalSearch } from "@/actions/search";
 import {
   LayoutDashboard,
   Lightbulb,
   CalendarRange,
-  CheckSquare,
-  Bug,
   BarChart3,
   Users,
-  Bell,
+  FolderKanban,
+  Boxes,
   Search,
   Menu,
   X,
@@ -21,22 +22,31 @@ import {
   Settings,
   User,
   Layers,
-  AlertTriangle,
+  ClipboardList,
+  GanttChartSquare,
+  CalendarDays,
+  ScrollText,
 } from "lucide-react";
 
 const navItems = [
   { label: "仪表盘", href: "/", icon: LayoutDashboard },
   { label: "需求池", href: "/requirements", icon: Lightbulb },
   { label: "计划管理", href: "/plans", icon: CalendarRange },
-  { label: "计划总览", href: "/plans/overview", icon: BarChart3 },
-  { label: "计划外工作", href: "/plans/unplanned", icon: AlertTriangle },
-  { label: "我的任务", href: "/tasks", icon: CheckSquare },
-  { label: "甘特图", href: "/gantt", icon: CalendarRange },
-  { label: "Bug 跟踪", href: "/bugs", icon: Bug },
-  { label: "报表统计", href: "/reports", icon: BarChart3 },
-  { label: "团队管理", href: "/team", icon: Users },
-  { label: "产品线小组", href: "/product-lines", icon: Layers },
-  { label: "通知中心", href: "/notifications", icon: Bell },
+  { label: "任务管理", href: "/managed-tasks", icon: GanttChartSquare },
+  { label: "项目管理", href: "/projects", icon: FolderKanban },
+  { label: "运维台账", href: "/operations", icon: ClipboardList },
+  { label: "产品线管理", href: "/product-catalog", icon: Boxes },
+  {
+    label: "系统管理",
+    icon: Settings,
+    children: [
+      { label: "工作日历", href: "/work-calendar", icon: CalendarDays },
+      { label: "报表统计", href: "/reports", icon: BarChart3 },
+      { label: "团队管理", href: "/team", icon: Users },
+      { label: "产品线小组", href: "/product-lines", icon: Layers },
+      { label: "审计日志", href: "/system/audit-logs", icon: ScrollText },
+    ],
+  },
 ];
 
 interface DashboardLayoutClientProps {
@@ -49,38 +59,63 @@ interface DashboardLayoutClientProps {
     image?: string | null;
     isAdmin?: boolean;
   };
-  initialUnreadCount?: number;
 }
 
 export default function DashboardLayoutClient({
   children,
   user,
-  initialUnreadCount = 0,
 }: DashboardLayoutClientProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(initialUnreadCount);
+  const [systemMenuOpen, setSystemMenuOpen] = useState(false);
+
+  const router = useRouter();
+  const [searchVal, setSearchVal] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [results, setResults] = useState<{
+    projects: { id: string; name: string; key: string }[];
+    tasks: { id: string; title: string; sequenceNo: number }[];
+    members: { id: string; name: string; username: string; department: string | null; position: string | null }[];
+  }>({ projects: [], tasks: [], members: [] });
+
+  // Debounced search
+  useEffect(() => {
+    const timer = setTimeout(async () => {
+      const trimmed = searchVal.trim();
+      if (!trimmed) {
+        setResults({ projects: [], tasks: [], members: [] });
+        return;
+      }
+      setIsSearching(true);
+      try {
+        const res = await globalSearch(trimmed);
+        if (res.success && res.data) {
+          setResults(res.data);
+        }
+      } catch (err) {
+        console.error("Search failed:", err);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchVal]);
 
   useEffect(() => {
-    // 监听实时未读数量推送 (SSE)
-    const eventSource = new EventSource("/api/notifications/sse");
+    if (
+      pathname.startsWith("/work-calendar") ||
+      pathname.startsWith("/reports") ||
+      pathname.startsWith("/team") ||
+      pathname.startsWith("/product-lines")
+    ) {
+      setSystemMenuOpen(true);
+    }
+  }, [pathname]);
 
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        if (data && typeof data.unreadCount === "number") {
-          setUnreadCount(data.unreadCount);
-        }
-      } catch {
-        // 忽略心跳或解析失败
-      }
-    };
 
-    return () => {
-      eventSource.close();
-    };
-  }, []);
 
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
@@ -114,13 +149,18 @@ export default function DashboardLayoutClient({
       >
         {/* 品牌区域 */}
         <div className="flex h-16 items-center justify-between border-b border-border px-5">
-          <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/20">
-              <LayoutDashboard className="h-5 w-5 text-white" />
+          <Link href="/" className="flex items-center gap-3 group">
+            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.02] border border-white/10 shadow-lg shadow-black/20 backdrop-blur-md group-hover:scale-105 transition-transform duration-300">
+              <SdlcIcon size={32} colored={true} />
             </div>
-            <span className="text-lg font-bold tracking-tight text-white">
-              AI2PmP
-            </span>
+            <div>
+              <span className="text-lg font-bold tracking-tight text-white leading-none block">
+                SDLC
+              </span>
+              <span className="text-[10px] text-indigo-300/70 font-medium tracking-tight leading-none block mt-0.5">
+                研发效能平台
+              </span>
+            </div>
           </Link>
 
           {/* 移动端关闭按钮 */}
@@ -136,6 +176,81 @@ export default function DashboardLayoutClient({
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="space-y-1">
             {navItems.map((item) => {
+              if (item.label === "系统管理" && !user.isAdmin) {
+                return null;
+              }
+              if ("children" in item && item.children) {
+                const isSysActive = item.children.some(child => isActive(child.href));
+                return (
+                  <li key={item.label}>
+                    <button
+                      onClick={() => setSystemMenuOpen(!systemMenuOpen)}
+                      className={`
+                        group flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium
+                        transition-all duration-200
+                        ${
+                          isSysActive
+                            ? "text-white font-semibold bg-white/[0.03]"
+                            : "text-sidebar-foreground hover:bg-accent hover:text-white"
+                        }
+                      `}
+                    >
+                      <div className="flex items-center gap-3">
+                        <item.icon
+                          className={`h-5 w-5 shrink-0 transition-colors ${
+                            isSysActive
+                              ? "text-indigo-400"
+                              : "text-muted-foreground group-hover:text-white"
+                          }`}
+                        />
+                        <span>{item.label}</span>
+                      </div>
+                      <ChevronDown
+                        className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
+                          systemMenuOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </button>
+                    {systemMenuOpen && (
+                      <ul className="mt-1 space-y-1">
+                        {item.children.map((child) => {
+                          const active = isActive(child.href);
+                          return (
+                            <li key={child.href}>
+                              <Link
+                                href={child.href}
+                                onClick={() => setSidebarOpen(false)}
+                                className={`
+                                  group flex items-center gap-3 rounded-xl pl-9 pr-3 py-2 text-xs font-medium
+                                  transition-all duration-200 relative
+                                  ${
+                                    active
+                                      ? "bg-indigo-600/10 text-white shadow-sm font-semibold"
+                                      : "text-sidebar-foreground/80 hover:bg-accent hover:text-white"
+                                  }
+                                `}
+                              >
+                                {active && (
+                                  <div className="absolute left-4 h-4 w-1 rounded-r-full bg-sidebar-active" />
+                                )}
+                                <child.icon
+                                  className={`h-4 w-4 shrink-0 transition-colors ${
+                                    active
+                                      ? "text-indigo-400"
+                                      : "text-muted-foreground group-hover:text-white"
+                                  }`}
+                                />
+                                <span>{child.label}</span>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </li>
+                );
+              }
+              
               const active = isActive(item.href);
               return (
                 <li key={item.href}>
@@ -202,28 +317,125 @@ export default function DashboardLayoutClient({
               <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="search"
+                value={searchVal}
+                onChange={(e) => {
+                  setSearchVal(e.target.value);
+                  setShowResults(true);
+                }}
+                onFocus={() => setShowResults(true)}
                 placeholder="搜索项目、任务、成员..."
                 className="w-64 rounded-lg border border-border bg-input py-2 pl-10 pr-4 text-sm text-white placeholder-muted-foreground transition-colors focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary lg:w-80"
               />
+
+              {/* 搜索结果下拉面板 */}
+              {showResults && searchVal.trim() !== "" && (
+                <>
+                  {/* 点击外部关闭 */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowResults(false)}
+                  />
+                  <div className="absolute left-0 mt-2 z-50 w-80 rounded-xl border border-border bg-card p-3 shadow-2xl shadow-black/40 animate-fade-in max-h-[400px] overflow-y-auto lg:w-[360px]">
+                    {isSearching ? (
+                      <div className="py-6 text-center text-xs text-muted-foreground">
+                        正在搜索中...
+                      </div>
+                    ) : results.projects.length === 0 && results.tasks.length === 0 && results.members.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-muted-foreground">
+                        未找到相关结果
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {/* 项目结果 */}
+                        {results.projects.length > 0 && (
+                          <div>
+                            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-2">
+                              项目
+                            </div>
+                            <div className="space-y-0.5">
+                              {results.projects.map((proj) => (
+                                <Link
+                                  key={proj.id}
+                                  href={`/projects/${proj.id}`}
+                                  onClick={() => {
+                                    setShowResults(false);
+                                    setSearchVal("");
+                                  }}
+                                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-white hover:bg-accent transition"
+                                >
+                                  <FolderKanban className="h-3.5 w-3.5 text-indigo-400 shrink-0" />
+                                  <span className="font-semibold text-indigo-300">[{proj.key}]</span>
+                                  <span className="truncate">{proj.name}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 任务结果 */}
+                        {results.tasks.length > 0 && (
+                          <div>
+                            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-2">
+                              任务
+                            </div>
+                            <div className="space-y-0.5">
+                              {results.tasks.map((task) => (
+                                <Link
+                                  key={task.id}
+                                  href={`/managed-tasks?search=${encodeURIComponent(task.title)}`}
+                                  onClick={() => {
+                                    setShowResults(false);
+                                    setSearchVal("");
+                                  }}
+                                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-white hover:bg-accent transition"
+                                >
+                                  <ClipboardList className="h-3.5 w-3.5 text-purple-400 shrink-0" />
+                                  <span className="font-semibold text-purple-300">#{task.sequenceNo}</span>
+                                  <span className="truncate">{task.title}</span>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 成员结果 */}
+                        {results.members.length > 0 && (
+                          <div>
+                            <div className="mb-1 text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 px-2">
+                              成员
+                            </div>
+                            <div className="space-y-0.5">
+                              {results.members.map((member) => (
+                                <Link
+                                  key={member.id}
+                                  href={`/team`}
+                                  onClick={() => {
+                                    setShowResults(false);
+                                    setSearchVal("");
+                                  }}
+                                  className="flex items-center gap-2 rounded-lg px-2.5 py-2 text-xs text-white hover:bg-accent transition"
+                                >
+                                  <User className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                                  <span className="font-medium">{member.name}</span>
+                                  <span className="text-[10px] text-muted-foreground truncate">
+                                    {member.department ? `@${member.department}` : ""}
+                                    {member.position ? ` · ${member.position}` : ""}
+                                  </span>
+                                </Link>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
           {/* 右侧：通知 + 用户 */}
           <div className="flex items-center gap-3">
-            {/* 通知铃铛 */}
-            <Link
-              href="/notifications"
-              className="relative rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-white transition-colors"
-            >
-              <Bell className="h-5 w-5" />
-              {/* 未读标记 */}
-              {unreadCount > 0 && (
-                <span className="absolute right-1.5 top-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] font-bold text-white">
-                  {unreadCount}
-                </span>
-              )}
-            </Link>
-
             {/* 用户下拉 */}
             <div className="relative">
               <button
@@ -252,14 +464,6 @@ export default function DashboardLayoutClient({
                     onClick={() => setUserMenuOpen(false)}
                   />
                   <div className="absolute right-0 top-full z-50 mt-2 w-48 animate-fade-in rounded-xl border border-border bg-card p-1.5 shadow-xl shadow-black/30">
-                    <Link
-                      href="/settings"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-card-foreground hover:bg-accent transition-colors"
-                    >
-                      <Settings className="h-4 w-4" />
-                      个人设置
-                    </Link>
                     <Link
                       href="/profile"
                       onClick={() => setUserMenuOpen(false)}

@@ -21,7 +21,7 @@ export default function AuthLayout({
       <div className="pointer-events-none absolute bottom-1/4 right-1/4 h-48 w-48 rounded-full bg-purple-600/8 blur-3xl" />
 
       {/* 内容容器 */}
-      <div className="relative z-10 w-full max-w-md px-4 py-8 animate-fade-in">
+      <div className="relative z-10 w-full px-4 py-8 animate-fade-in flex items-center justify-center">
         {children}
       </div>
     </div>

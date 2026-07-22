@@ -1,0 +1,4 @@
+import { notFound, redirect } from "next/navigation";
+import { getQuarterlyPlanById, getQuarterlyPlanFormContext } from "@/actions/quarterly-plans";
+import QuarterlyPlanForm from "@/components/plans/quarterly-plan-form";
+export default async function EditQuarterlyPlanPage({params}:{params:Promise<{planId:string}>}){const {planId}=await params;const [result,context]=await Promise.all([getQuarterlyPlanById(planId),getQuarterlyPlanFormContext()]);if(!result.success||!result.data)notFound();if(!result.canManage)redirect(`/plans/quarterly/${planId}`);const p=result.data;return <div className="space-y-6"><h1 className="text-2xl font-bold text-white">编辑季度里程碑计划</h1><QuarterlyPlanForm teams={context.data?.manageableTeams??[]} initialData={{id:p.id,productLineTeamId:p.productLineTeamId,year:p.year,quarter:p.quarter,goals:p.goals,risks:p.risks}}/></div>}

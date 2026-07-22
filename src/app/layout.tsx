@@ -3,8 +3,11 @@ import "./globals.css";
 
 // 全站元数据
 export const metadata: Metadata = {
-  title: "AI2PmP - 研发项目管理系统",
-  description: "内部研发项目管理系统",
+  title: "SDLC · 研发效能平台",
+  description: "内部研发效能平台",
+  icons: {
+    icon: "/favicon.svg",
+  },
 };
 
 export default function RootLayout({
@@ -13,7 +16,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="zh-CN" className="dark">
+    <html lang="zh-CN" className="dark" suppressHydrationWarning>
       <body className="min-h-screen antialiased">{children}</body>
     </html>
   );

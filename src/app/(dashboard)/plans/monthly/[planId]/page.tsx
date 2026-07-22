@@ -1,0 +1,2 @@
+import { notFound } from "next/navigation";import { getMonthlyPlanById } from "@/actions/monthly-plans";import MonthlyPlanDetail from "@/components/plans/monthly-plan-detail";
+export default async function MonthlyPlanPage({params}:{params:Promise<{planId:string}>}){const {planId}=await params;const result=await getMonthlyPlanById(planId);if(!result.success||!result.data)notFound();return <MonthlyPlanDetail plan={result.data} canManage={Boolean(result.canManage)}/>}

@@ -81,4 +81,57 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
+  events: {
+    async signIn({ user }) {
+      if (user?.id) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: user.id },
+            select: { username: true, name: true },
+          });
+          if (dbUser) {
+            await prisma.auditLog.create({
+              data: {
+                userId: user.id,
+                username: dbUser.username,
+                name: dbUser.name,
+                action: "LOGIN",
+                module: "SYSTEM",
+                details: `用户 [${dbUser.name}] 登录成功`,
+              },
+            });
+          }
+        } catch (error) {
+          console.error("记录登录审计日志失败:", error);
+        }
+      }
+    },
+    async signOut(message) {
+      const token = (message as any).token;
+      const session = (message as any).session;
+      const userId = token?.id || session?.user?.id;
+      if (userId) {
+        try {
+          const dbUser = await prisma.user.findUnique({
+            where: { id: userId },
+            select: { username: true, name: true },
+          });
+          if (dbUser) {
+            await prisma.auditLog.create({
+              data: {
+                userId: userId,
+                username: dbUser.username,
+                name: dbUser.name,
+                action: "LOGOUT",
+                module: "SYSTEM",
+                details: `用户 [${dbUser.name}] 退出登录`,
+              },
+            });
+          }
+        } catch (error) {
+          console.error("记录登出审计日志失败:", error);
+        }
+      }
+    },
+  },
 });

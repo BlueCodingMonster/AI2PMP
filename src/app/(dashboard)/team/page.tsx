@@ -5,14 +5,17 @@ import TeamClient from "@/components/team/team-client";
 import { Users } from "lucide-react";
 
 export const metadata = {
-  title: "AI2PmP - 团队管理",
-  description: "内部研发项目管理系统 - 团队管理",
+  title: "SDLC · 团队管理",
+  description: "SDLC · 研发效能平台 - 团队管理",
 };
 
 export default async function TeamPage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
+  }
+  if (!session.user.isAdmin) {
+    redirect("/");
   }
 
   const result = await getMembers();

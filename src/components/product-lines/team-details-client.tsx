@@ -8,6 +8,9 @@ import {
   createSecondment,
   completeSecondment,
   linkProjectToTeam,
+  linkProjectsToTeam,
+  linkProductsToTeam,
+  setProductTeamLink,
   deleteProductLineTeam,
 } from "@/actions/product-lines";
 import { ProductLineRole, SecondmentStatus } from "@prisma/client";
@@ -22,6 +25,7 @@ import {
   Edit2,
   Calendar,
   Layers,
+  Boxes,
   ArrowUpRight,
   Loader2,
   CheckCircle,
@@ -35,6 +39,7 @@ interface TeamDetailsProps {
   allUsers: any[];
   allProjects: any[];
   allTeams: any[];
+  allProducts: any[];
 }
 
 const roleLabels: Record<ProductLineRole, string> = {
@@ -53,7 +58,7 @@ const roleColors: Record<ProductLineRole, string> = {
   TESTER: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
 };
 
-export default function TeamDetailsClient({ team, allUsers, allProjects, allTeams }: TeamDetailsProps) {
+export default function TeamDetailsClient({ team, allUsers, allProjects, allTeams, allProducts }: TeamDetailsProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
 
@@ -62,6 +67,7 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
   const [isMemberModalOpen, setIsMemberModalOpen] = useState(false);
   const [isSecondmentModalOpen, setIsSecondmentModalOpen] = useState(false);
   const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isProductModalOpen, setIsProductModalOpen] = useState(false);
 
   // 表单状态 - 新增固定成员
   const [memberUserId, setMemberUserId] = useState("");
@@ -77,8 +83,10 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
   const [secError, setSecError] = useState<string | null>(null);
 
   // 表单状态 - 关联项目
-  const [linkProjectId, setLinkProjectId] = useState("");
+  const [linkProjectIds, setLinkProjectIds] = useState<string[]>([]);
   const [linkError, setLinkError] = useState<string | null>(null);
+  const [linkProductIds, setLinkProductIds] = useState<string[]>([]);
+  const [productLinkError, setProductLinkError] = useState<string | null>(null);
 
   // 获取该小组目前的固定成员 ID 列表
   const fixedUserIds = team.members.map((m: any) => m.userId);
@@ -94,6 +102,8 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
 
   // 未绑定到当前小组的项目
   const candidateProjects = allProjects.filter((p) => p.productLineTeamId !== team.id);
+  const linkedProductIds = team.products.map((product: any) => product.id);
+  const candidateProducts = allProducts.filter((product) => !linkedProductIds.includes(product.id));
 
   // 1. 新增/编辑固定小组成员
   const handleAddMember = (e: React.FormEvent) => {
@@ -198,17 +208,17 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
     e.preventDefault();
     setLinkError(null);
 
-    if (!linkProjectId) {
-      setLinkError("请选择要关联的项目");
+    if (linkProjectIds.length === 0) {
+      setLinkError("请至少选择一个项目");
       return;
     }
 
     startTransition(async () => {
       try {
-        const res = await linkProjectToTeam(linkProjectId, team.id);
+        const res = await linkProjectsToTeam(linkProjectIds, team.id);
         if (res.success) {
           setIsProjectModalOpen(false);
-          setLinkProjectId("");
+          setLinkProjectIds([]);
           router.refresh();
         } else {
           setLinkError(res.error || "绑定项目失败");
@@ -234,6 +244,29 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
       } catch (err) {
         console.error(err);
       }
+    });
+  };
+
+  const handleLinkProduct = (e: React.FormEvent) => {
+    e.preventDefault();
+    setProductLinkError(null);
+    if (linkProductIds.length === 0) return setProductLinkError("请至少选择一个产品线");
+
+    startTransition(async () => {
+      const res = await linkProductsToTeam(team.id, linkProductIds);
+      if (!res.success) return setProductLinkError(res.error || "关联产品线失败");
+      setIsProductModalOpen(false);
+      setLinkProductIds([]);
+      router.refresh();
+    });
+  };
+
+  const handleUnlinkProduct = (productId: string) => {
+    if (!window.confirm("确定要取消该产品线与本小组的关联吗？")) return;
+    startTransition(async () => {
+      const res = await setProductTeamLink(team.id, productId, false);
+      if (!res.success) return alert(res.error || "取消产品线关联失败");
+      router.refresh();
     });
   };
 
@@ -477,25 +510,62 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
 
         </div>
 
-        {/* 右侧：关联承接项目 */}
+        {/* 右侧：关联产品线与项目 */}
         <div className="space-y-6">
           <div className="glass rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
               <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <FolderGit className="h-4 w-4 text-indigo-400" />
-                关联研发项目 ({team.projects.length})
+                <Boxes className="h-4 w-4 text-cyan-400" />
+                关联产品线 ({team.products.length})
               </h3>
               <button
-                onClick={() => setIsProjectModalOpen(true)}
+                onClick={() => { setProductLinkError(null); setLinkProductIds([]); setIsProductModalOpen(true); }}
+                className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold"
+              >
+                关联产品线
+              </button>
+            </div>
+
+            {team.products.length === 0 ? (
+              <p className="text-[10px] text-muted-foreground text-center py-6">
+                本小组尚未关联产品线。
+              </p>
+            ) : (
+              <div className="space-y-3 text-xs">
+                {team.products.map((product: any) => (
+                  <div key={product.id} className="bg-black/10 border border-border/30 rounded-xl p-3 flex items-center justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <Link href="/product-catalog" className="font-bold text-white hover:text-cyan-300 transition-colors block truncate">
+                        {product.name}
+                      </Link>
+                      <p className="mt-1 truncate text-[10px] text-muted-foreground">{product.description || "暂无产品说明"}</p>
+                    </div>
+                    <button onClick={() => handleUnlinkProduct(product.id)} className="rounded-lg p-1 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0" title="取消产品线关联">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="glass rounded-xl p-6 space-y-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <FolderGit className="h-4 w-4 text-indigo-400" />
+                关联项目 ({team.projects.length})
+              </h3>
+              <button
+                onClick={() => { setLinkError(null); setLinkProjectIds([]); setIsProjectModalOpen(true); }}
                 className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
               >
-                关联新项目
+                关联项目
               </button>
             </div>
 
             {team.projects.length === 0 ? (
               <p className="text-[10px] text-muted-foreground text-center py-6">
-                本产品线小组当前未承接任何具体的研发项目。
+                本小组尚未关联项目。
               </p>
             ) : (
               <div className="space-y-3.5 text-xs">
@@ -715,12 +785,51 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
         </div>
       )}
 
-      {/* ===== modal 4: 关联研发项目 ===== */}
+      {/* ===== modal 4: 关联产品线 ===== */}
+      {isProductModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
+          <div className="glass w-full max-w-md rounded-2xl border border-border/80 bg-background/95 p-6 shadow-2xl space-y-4">
+            <div className="flex items-center justify-between border-b border-border/40 pb-3">
+              <h3 className="text-base font-bold text-white">关联产品线</h3>
+              <button onClick={() => setIsProductModalOpen(false)} className="text-muted-foreground hover:text-white">
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {productLinkError && <div className="rounded bg-red-500/10 border border-red-500/20 p-2 text-xs text-red-400">{productLinkError}</div>}
+
+            <form onSubmit={handleLinkProduct} className="space-y-4 text-xs sm:text-sm">
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-muted-foreground">选择产品线（可多选）*</label>
+                  <button type="button" onClick={() => setLinkProductIds(linkProductIds.length === candidateProducts.length ? [] : candidateProducts.map((product) => product.id))} className="text-[10px] font-semibold text-cyan-400 hover:text-cyan-300">
+                    {linkProductIds.length === candidateProducts.length && candidateProducts.length > 0 ? "取消全选" : "全选"}
+                  </button>
+                </div>
+                <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border bg-input p-2">
+                  {candidateProducts.map((product) => <label key={product.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs text-slate-200 hover:bg-white/5"><input type="checkbox" checked={linkProductIds.includes(product.id)} onChange={() => setLinkProductIds((current) => current.includes(product.id) ? current.filter((id) => id !== product.id) : [...current, product.id])} className="h-3.5 w-3.5 accent-cyan-500" /><span className="min-w-0 flex-1 truncate">{product.name}</span></label>)}
+                </div>
+                {candidateProducts.length === 0 && <p className="text-[10px] text-muted-foreground">暂无可关联的产品线，请先在产品线管理中新增产品。</p>}
+                {linkProductIds.length > 0 && <p className="text-[10px] text-cyan-300">已选择 {linkProductIds.length} 个产品线</p>}
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
+                <button type="button" onClick={() => setIsProductModalOpen(false)} className="rounded-lg border border-border bg-input py-2 px-4 text-xs font-medium text-white hover:bg-muted">取消</button>
+                <button type="submit" disabled={isPending || linkProductIds.length === 0} className="inline-flex items-center gap-1 rounded-lg bg-cyan-600 px-4 py-2 text-xs font-semibold text-white hover:bg-cyan-500 disabled:opacity-50">
+                  {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}确认关联
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ===== modal 5: 关联项目 ===== */}
       {isProjectModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
           <div className="glass w-full max-w-md rounded-2xl border border-border/80 bg-background/95 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-base font-bold text-white">关联项目归属于本小组</h3>
+              <h3 className="text-base font-bold text-white">关联项目</h3>
               <button onClick={() => setIsProjectModalOpen(false)} className="text-muted-foreground hover:text-white">
                 <X className="h-4 w-4" />
               </button>
@@ -734,19 +843,17 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
 
             <form onSubmit={handleLinkProject} className="space-y-4 text-xs sm:text-sm">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground">选择研发项目 *</label>
-                <select
-                  value={linkProjectId}
-                  onChange={(e) => setLinkProjectId(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-input py-2 px-3 text-white focus:outline-none"
-                >
-                  <option value="">请选择需要关联的项目...</option>
-                  {candidateProjects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      [{p.key}] {p.name}
-                    </option>
-                  ))}
-                </select>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-semibold text-muted-foreground">选择项目（可多选）*</label>
+                  <button type="button" onClick={() => setLinkProjectIds(linkProjectIds.length === candidateProjects.length ? [] : candidateProjects.map((project) => project.id))} className="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300">
+                    {linkProjectIds.length === candidateProjects.length && candidateProjects.length > 0 ? "取消全选" : "全选"}
+                  </button>
+                </div>
+                <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border bg-input p-2">
+                  {candidateProjects.map((project) => <label key={project.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs text-slate-200 hover:bg-white/5"><input type="checkbox" checked={linkProjectIds.includes(project.id)} onChange={() => setLinkProjectIds((current) => current.includes(project.id) ? current.filter((id) => id !== project.id) : [...current, project.id])} className="h-3.5 w-3.5 accent-indigo-500" /><span className="shrink-0 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-bold text-indigo-300">{project.key}</span><span className="min-w-0 flex-1 truncate">{project.name}</span></label>)}
+                </div>
+                {candidateProjects.length === 0 && <p className="text-[10px] text-muted-foreground">暂无可关联项目。</p>}
+                {linkProjectIds.length > 0 && <p className="text-[10px] text-indigo-300">已选择 {linkProjectIds.length} 个项目</p>}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
@@ -759,11 +866,11 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
                 </button>
                 <button
                   type="submit"
-                  disabled={isPending}
+                  disabled={isPending || linkProjectIds.length === 0}
                   className="inline-flex items-center gap-1 rounded-lg bg-indigo-600 px-4 py-2 text-xs font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
                 >
                   {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  绑定项目
+                  确认关联
                 </button>
               </div>
             </form>

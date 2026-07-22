@@ -17,208 +17,105 @@ datasource db {
 
 /// 项目状态
 enum ProjectStatus {
-  PLANNING   // 规划中
-  ACTIVE     // 进行中
-  ON_HOLD    // 暂停
-  COMPLETED  // 已完成
-  ARCHIVED   // 已归档
+  CONTRACT_SIGNED // 合同签订
+  IMPLEMENTING // 实施中
+  ACCEPTANCE // 验收中
+  ARCHIVED // 完成归档
 }
 
 /// 项目成员角色
 enum ProjectRole {
-  OWNER     // 拥有者
-  ADMIN     // 管理员
+  OWNER // 拥有者
+  ADMIN // 管理员
   DEVELOPER // 开发者
-  TESTER    // 测试人员
-  VIEWER    // 观察者
+  TESTER // 测试人员
+  VIEWER // 观察者
 }
 
 /// 需求状态
 enum RequirementStatus {
-  DRAFT        // 草稿
+  PENDING_REVIEW // 待评审
   UNDER_REVIEW // 评审中
-  APPROVED     // 已批准
-  PLANNED      // 已排期
-  IN_PROGRESS  // 进行中
-  COMPLETED    // 已完成
-  REJECTED     // 已拒绝
-  DEFERRED     // 已延期
-}
-
-/// 需求类型
-enum RequirementType {
-  FUNCTIONAL       // 功能需求
-  NON_FUNCTIONAL   // 非功能需求
-  ENHANCEMENT      // 功能增强
-  OPTIMIZATION     // 性能优化
-  TECH_DEBT        // 技术债务
+  REVIEWED // 已评审
+  REJECTED // 已驳回
+  SCHEDULED // 已排期
+  COMPLETED // 已完成
 }
 
 /// 需求来源
 enum RequirementSource {
-  PRODUCT_PLANNING     // 产品规划
-  CUSTOMER_FEEDBACK    // 客户反馈
-  INTERNAL_SUGGESTION  // 内部建议
-  MARKET_ANALYSIS      // 市场分析
-  TECH_DEBT            // 技术债务
+  PRODUCT_PLANNING // 产品规划
+  CUSTOMER_FEEDBACK // 客户反馈
+  INTERNAL_REQUEST // 公司内部需求
+  MARKET_REQUEST // 市场需求
 }
 
 /// 优先级（通用）
 enum Priority {
   URGENT // 紧急
-  HIGH   // 高
+  HIGH // 高
   MEDIUM // 中
-  LOW    // 低
+  LOW // 低
 }
 
-/// 计划类型
-enum PlanType {
-  ANNUAL    // 年度计划
-  HALF_YEAR // 半年度计划
-  QUARTERLY // 季度计划
-  MONTHLY   // 月度计划
+enum PlanPublicationStatus {
+  DRAFT
+  PUBLISHED
 }
 
-/// 计划状态
-enum PlanStatus {
-  DRAFT       // 草稿
-  PUBLISHED   // 已发布
-  IN_PROGRESS // 进行中
-  ADJUSTED    // 已调整
-  COMPLETED   // 已完成
-  CANCELLED   // 已作废
-  ARCHIVED    // 已归档
+enum QuarterlyGoalDomain {
+  PRODUCT_ITERATION
+  PRODUCT_DELIVERY
+  PRODUCT_RESEARCH
+  MARKET_SUPPORT
+  OPERATIONS_STABILITY
+  TECHNICAL_INNOVATION
+  AI_ENABLEMENT
 }
 
-/// 计划条目状态
-enum PlanItemStatus {
-  TODO        // 待办
-  IN_PROGRESS // 进行中
-  DONE        // 已完成
-  CANCELLED   // 已取消
+enum PlanTrackingStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+  DELAY_RISK
+  DELAYED
+  PAUSED
 }
 
-/// 工作项类型
-enum WorkItemType {
-  REQUIREMENT      // 需求
-  VERSION_GOAL     // 版本目标
-  PROJECT_MATTER   // 项目事项
-  OPERATIONS       // 运维支撑
-  MARKET_SUPPORT   // 市场支撑
-  RESEARCH         // 技术调研
-  DEFECT_FIX       // 缺陷或紧急修复
-  TEMPORARY        // 其他临时工作
+enum PlanRiskLevel {
+  HIGH
+  MEDIUM
+  LOW
 }
 
-/// 计划外工作后续处理方式
-enum PlanningTreatment {
-  NOT_INCLUDED       // 不纳入计划，仅记录
-  ADD_TO_CURRENT     // 补入当前月度计划
-  MOVE_TO_NEXT       // 转入下个月度计划
-  LINK_EXISTING_ITEM // 关联到已有工作项
+enum QuarterlyRiskStatus {
+  NOT_TRIGGERED
+  TRIGGERED
+  HANDLING
+  CLOSED
 }
 
-/// 工作来源
-enum WorkItemSource {
-  PLATFORM_RND   // 平台研发规划
-  LOCAL_DELIVERY // 本地化项目交付
-  UNPLANNED      // 计划外工作
-}
-
-/// 执行流程模板
-enum ExecutionFlowTemplate {
-  NONE                  // 不使用流程模板
-  INTERNAL_RND          // 内部研发管理流程
-  LOCAL_DEPLOYMENT      // 本地化部署流程
-  DATA_MIGRATION        // 数据迁移流程
-  SYSTEM_INTEGRATION    // 系统对接流程
-  ONSITE_IMPLEMENTATION // 现场实施流程
-}
-
-/// 专项任务类型
-enum SpecialTaskCategory {
-  TECH_RESEARCH         // 技术研究
-  SCENARIO_VALIDATION   // 场景验证
-  INTELLECTUAL_PROPERTY // 知识产权
-}
-
-/// 知识产权子类型
-enum IntellectualPropertyType {
-  PATENT             // 专利
-  SOFTWARE_COPYRIGHT // 软著
-  STANDARD           // 标准
-}
-
-/// 阶段所属环节
-enum StageGroup {
-  PRODUCT      // 产品环节
-  DEVELOPMENT  // 研发环节
-  TEST_RELEASE // 测试与发布环节
-  DELIVERY     // 项目交付环节
-  OTHER        // 其他
+enum ResourceRequestType {
+  PEOPLE
+  TECHNOLOGY
+  BUDGET
+  MANAGEMENT_COORDINATION
 }
 
 
-/// 任务状态
-enum TaskStatus {
-  TODO        // 待办
-  IN_PROGRESS // 进行中
-  IN_REVIEW   // 评审中
-  DONE        // 已完成
-  CANCELLED   // 已取消
-}
-
-/// 任务类型
-enum TaskType {
-  FEATURE     // 新功能
-  IMPROVEMENT // 改进
-  TASK        // 普通任务
-  SUBTASK     // 子任务
-}
-
-/// 缺陷状态
-enum BugStatus {
-  OPEN        // 新建
-  CONFIRMED   // 已确认
-  IN_PROGRESS // 修复中
-  FIXED       // 已修复
-  CLOSED      // 已关闭
-  WONT_FIX    // 不修复
-}
-
-/// 缺陷严重程度
-enum BugSeverity {
-  BLOCKER  // 阻塞
-  CRITICAL // 严重
-  MAJOR    // 主要
-  MINOR    // 次要
-  TRIVIAL  // 轻微
-}
-
-/// 通知类型
-enum NotificationType {
-  TASK_ASSIGNED        // 任务分配
-  TASK_UPDATED         // 任务更新
-  BUG_ASSIGNED         // 缺陷分配
-  BUG_UPDATED          // 缺陷更新
-  MENTION              // 被提及
-  REQUIREMENT_UPDATED  // 需求更新
-  PLAN_PUBLISHED       // 计划发布
-  SYSTEM               // 系统通知
-}
 
 /// 产品线成员岗位角色
 enum ProductLineRole {
-  LEADER    // 组长
-  PM        // 产品经理
-  FRONTEND  // 前端开发
-  BACKEND   // 后端开发
-  TESTER    // 测试工程师
+  LEADER // 组长
+  PM // 产品经理
+  FRONTEND // 前端开发
+  BACKEND // 后端开发
+  TESTER // 测试工程师
 }
 
 /// 人员借调状态
 enum SecondmentStatus {
-  ACTIVE    // 借调中
+  ACTIVE // 借调中
   COMPLETED // 已结束
 }
 
@@ -233,6 +130,87 @@ enum ProductVersionStatus {
   CANCELLED
 }
 
+enum OperationVersionType {
+  PRODUCT
+  PROJECT
+}
+
+enum OperationType {
+  DATA_REPAIR
+  ENVIRONMENT_CONFIGURATION
+  CONSULTATION
+  CODE_BUG
+  OTHER
+}
+
+enum OperationStatus {
+  PENDING
+  PROCESSING
+  PENDING_CONFIRMATION
+  COMPLETED
+}
+
+enum CustomerConfirmationStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum ManagedTaskCategory {
+  DEVELOPMENT
+  OTHER
+}
+
+enum ManagedTaskStatus {
+  UNSCHEDULED
+  TODO
+  IN_PROGRESS
+  PAUSED
+  DONE
+  CANCELLED
+}
+
+enum ManagedTaskVersionType {
+  PRODUCT
+  PROJECT
+}
+
+enum ManagedTaskMonthlyItemType {
+  PRODUCT_DELIVERY
+  PROJECT_DELIVERY
+  MARKET_ACTION
+  COST_OPTIMIZATION
+  AI_PRODUCT_ENABLEMENT
+  AI_EFFICIENCY
+  RISK
+  RESOURCE_REQUEST
+}
+
+enum ManagedTaskSdlcNode {
+  REQUIREMENT_ANALYSIS
+  SOLUTION_DESIGN
+  DEVELOPMENT
+  INTEGRATION
+  TESTING
+  RELEASE
+  ACCEPTANCE
+  OPERATION_OBSERVATION
+  OTHER
+}
+
+enum WorkCalendarStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum WorkCalendarDayType {
+  REGULAR_WORKDAY
+  REGULAR_WEEKEND
+  LEGAL_HOLIDAY
+  ADJUSTED_WORKDAY
+  SPECIAL_REST_DAY
+  SPECIAL_WORKDAY
+}
+
 // ============================================================================
 // 数据模型
 // ============================================================================
@@ -243,34 +221,37 @@ model User {
   username   String   @unique // 登录名
   email      String?  @unique // 可选联系邮箱，不再作为登录账号
   name       String
-  password   String   // bcrypt 加密存储
-  avatar     String?  // 头像 URL
-  phone      String?  // 手机号
-  department String?  // 部门
+  password   String // bcrypt 加密存储
+  avatar     String? // 头像 URL
+  phone      String? // 手机号
+  department String? // 部门
+  level      String? // 人员层级
+  position   String? // 专业岗位
   isAdmin    Boolean  @default(false) // 是否管理员
-  isActive   Boolean  @default(true)  // 是否启用
+  isActive   Boolean  @default(true) // 是否启用
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
   // 关联关系
-  createdProjects      Project[]       @relation("ProjectCreator")
-  projectMemberships   ProjectMember[]
-  assignedRequirements Requirement[]   @relation("RequirementAssignee")
-  createdRequirements  Requirement[]   @relation("RequirementCreator")
-  createdPlans         Plan[]
-  assignedPlanItems    PlanItem[]
-  assignedPlanItemStages PlanItemStage[]
-  assignedTasks        Task[]          @relation("TaskAssignee")
-  createdTasks         Task[]          @relation("TaskCreator")
-  assignedBugs         Bug[]           @relation("BugAssignee")
-  createdBugs          Bug[]           @relation("BugCreator")
-  timeLogs             TimeLog[]
-  notifications        Notification[]
-  comments             Comment[]
-  
+  createdProjects         Project[]              @relation("ProjectCreator")
+  managedProjects         Project[]              @relation("ProjectManager")
+  projectMemberships      ProjectMember[]
+  createdRequirements     Requirement[]          @relation("RequirementCreator")
+  createdQuarterlyPlans   QuarterlyPlan[]        @relation("QuarterlyPlanCreator")
+  updatedQuarterlyPlans   QuarterlyPlan[]        @relation("QuarterlyPlanUpdater")
+  createdMonthlyPlans     MonthlyPlan[]          @relation("MonthlyPlanCreator")
+  updatedMonthlyPlans     MonthlyPlan[]          @relation("MonthlyPlanUpdater")
+
+  createdOperationRecords OperationRecord[]      @relation("OperationRecordCreator")
+  handledOperationRecords OperationRecord[]      @relation("OperationRecordHandlers")
+  createdManagedTasks     ManagedTask[]          @relation("ManagedTaskCreator")
+  executedManagedTasks    ManagedTask[]          @relation("ManagedTaskExecutor")
+  managedTaskStatusLogs   ManagedTaskStatusLog[]
+
   // 产品线与借调关联
   productLineMemberships ProductLineMember[]
   secondments            MemberSecondment[]
+  auditLogs              AuditLog[]
 
   @@index([username])
   @@index([email])
@@ -280,34 +261,61 @@ model User {
 
 /// 项目模型
 model Project {
-  id          String        @id @default(cuid())
-  name        String
-  key         String        @unique // 项目唯一标识，如 "AI2P"
-  description String?       @db.Text
-  status      ProjectStatus @default(PLANNING)
-  startDate   DateTime?
-  endDate     DateTime?
-  createdById String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id                String        @id @default(cuid())
+  name              String
+  key               String        @unique // 项目唯一标识，如 "AI2P"
+  customerName      String        @default("")
+  customerContact   String?
+  customerPhone     String?
+  projectManagerId  String?
+  marketManager     String?
+  salesManager      String?
+  contractNumber    String?
+  contractAmount    Decimal?      @db.Decimal(18, 2)
+  contractSignedAt  DateTime?
+  warrantyMonths    Int?
+  warrantyExpiresAt DateTime?
+  status            ProjectStatus @default(CONTRACT_SIGNED)
+  acceptanceDate    DateTime?
+  description       String?       @db.Text
+  createdById       String
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
 
   // 关联关系
-  createdBy    User            @relation("ProjectCreator", fields: [createdById], references: [id])
-  members      ProjectMember[]
-  requirements Requirement[]
-  planItems    PlanItem[]
-  tasks        Task[]
-  bugs         Bug[]
-  
+  createdBy      User             @relation("ProjectCreator", fields: [createdById], references: [id])
+  projectManager User?            @relation("ProjectManager", fields: [projectManagerId], references: [id], onDelete: SetNull)
+  members        ProjectMember[]
+  versions       ProjectVersion[]
+
   // 关联产品线小组
   productLineTeamId String?
   productLineTeam   ProductLineTeam? @relation(fields: [productLineTeamId], references: [id], onDelete: SetNull)
 
   @@index([status])
   @@index([createdById])
+  @@index([projectManagerId])
   @@index([key])
   @@index([productLineTeamId])
   @@map("projects")
+}
+
+/// 项目交付版本记录
+model ProjectVersion {
+  id        String   @id @default(cuid())
+  projectId String
+  version   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  project               Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  ownedOperationRecords OperationRecord[] @relation("OperationRecordProjectVersion")
+  fixedOperationRecords OperationRecord[] @relation("OperationRecordFixedProjectVersion")
+  managedTasks          ManagedTask[]     @relation("ManagedTaskProjectVersion")
+
+  @@unique([projectId, version])
+  @@index([projectId])
+  @@map("project_versions")
 }
 
 /// 项目成员模型 - 管理用户与项目的多对多关系及角色
@@ -330,323 +338,260 @@ model ProjectMember {
 
 /// 需求模型 - 产品需求管理
 model Requirement {
-  id                 String            @id @default(cuid())
-  title              String
-  description        String?           @db.Text
-  status             RequirementStatus @default(DRAFT)
-  type               RequirementType
-  source             RequirementSource
-  priority           Priority          @default(MEDIUM)
-  businessValue      Int?              // 业务价值评分 (1-10)
-  complexity         Int?              // 复杂度评分 (1-10)
-  estimatedDays      Float?            // 预估工期（天）
-  projectId          String?           // 可选：关联项目
-  assigneeId         String?           // 可选：负责人
-  createdById        String
-  acceptanceCriteria String?           @db.Text // 验收标准
-  sortOrder          Int               @default(0) // 排序权重
-  
-  // 新增：产品线关联、提出方、提出时间
-  productLineTeamId  String?
-  proposer           String?           // 需求提出方 (如: 销售部、运营部)
-  proposedAt         DateTime?         // 需求提出物理时间
-  
-  createdAt          DateTime          @default(now())
-  updatedAt          DateTime          @updatedAt
+  id                String            @id @default(cuid())
+  sequenceNo        Int               @unique @default(autoincrement())
+  title             String
+  summary           String?           @db.Text
+  status            RequirementStatus @default(PENDING_REVIEW)
+  source            RequirementSource
+  priority          Priority          @default(MEDIUM)
+  productLineTeamId String?
+  proposer          String?
+  proposedAt        DateTime?
+  reviewedAt        DateTime?
+  createdById       String
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
 
   // 关联关系
-  project           Project?          @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  assignee          User?             @relation("RequirementAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  createdBy         User              @relation("RequirementCreator", fields: [createdById], references: [id])
-  productLineTeam   ProductLineTeam?  @relation(fields: [productLineTeamId], references: [id], onDelete: SetNull)
-  planItems         PlanItem[]
-  tasks             Task[]
-  comments          Comment[]
+  createdBy       User             @relation("RequirementCreator", fields: [createdById], references: [id])
+  productLineTeam ProductLineTeam? @relation(fields: [productLineTeamId], references: [id], onDelete: SetNull)
+
 
   @@index([status])
   @@index([priority])
-  @@index([projectId])
-  @@index([assigneeId])
   @@index([createdById])
-  @@index([type])
   @@index([source])
   @@index([productLineTeamId])
   @@map("requirements")
 }
 
-/// 计划模型 - 年度/季度/月度计划
-model Plan {
-  id           String     @id @default(cuid())
-  title        String
-  description  String?    @db.Text
-  type         PlanType
-  status       PlanStatus @default(DRAFT)
-  year         Int        // 所属年份
-  quarter      Int?       // 所属季度 (1-4)，仅季度计划和月度计划使用
-  month        Int?       // 所属月份 (1-12)，仅月度计划使用
-  halfYear     Int?       // 所属半年度 (1-2)，仅半年度计划使用
-  startDate    DateTime
-  endDate      DateTime
-  parentPlanId String?    // 父计划 ID，用于计划层级关系
-  sourcePlanId      String?
-  replacementPlanId String?
-  adjustedReason    String?   @db.Text
-  voidedReason      String?   @db.Text
-  voidedAt          DateTime?
-  goals        String?    @db.Text // 计划目标描述
+model QuarterlyPlan {
+  id                String                @id @default(cuid())
   productLineTeamId String
-  createdById  String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  year              Int
+  quarter           Int
+  status            PlanPublicationStatus @default(DRAFT)
+  createdById       String
+  updatedById       String
+  publishedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
 
-  // 关联关系（自关联：父子计划）
-  parentPlan Plan?  @relation("PlanHierarchy", fields: [parentPlanId], references: [id], onDelete: SetNull)
-  childPlans Plan[] @relation("PlanHierarchy")
-  sourcePlan      Plan?  @relation("PlanSource", fields: [sourcePlanId], references: [id], onDelete: SetNull)
-  derivedPlans    Plan[] @relation("PlanSource")
-  replacementPlan Plan?  @relation("PlanReplacement", fields: [replacementPlanId], references: [id], onDelete: SetNull)
-  replacedPlans   Plan[] @relation("PlanReplacement")
-  productLineTeam ProductLineTeam @relation(fields: [productLineTeamId], references: [id])
-  createdBy  User   @relation(fields: [createdById], references: [id])
-  items      PlanItem[]
+  goals           QuarterlyGoal[]
+  risks           QuarterlyRisk[]
+  productLineTeam ProductLineTeam @relation(fields: [productLineTeamId], references: [id], onDelete: Cascade)
+  createdBy       User            @relation("QuarterlyPlanCreator", fields: [createdById], references: [id])
+  updatedBy       User            @relation("QuarterlyPlanUpdater", fields: [updatedById], references: [id])
 
+  @@unique([productLineTeamId, year, quarter])
   @@index([status])
-  @@index([type])
-  @@index([year])
-  @@index([parentPlanId])
-  @@index([sourcePlanId])
-  @@index([replacementPlanId])
-  @@index([productLineTeamId])
-  @@index([createdById])
-  @@map("plans")
+  @@index([year, quarter])
+  @@map("quarterly_plans")
 }
 
-/// 计划条目模型 - 计划中的具体工作项
-model PlanItem {
-  id            String         @id @default(cuid())
-  planId        String?
-  productLineTeamId String?
-  title         String
-  description   String?        @db.Text
-  type          WorkItemType   @default(REQUIREMENT)
-  source              WorkItemSource        @default(PLATFORM_RND)
-  executionFlow       ExecutionFlowTemplate @default(NONE)
-  versionNameText     String?
-  specialTaskCategory SpecialTaskCategory?
-  ipType              IntellectualPropertyType?
-  specialSerialNo     String?
-  specialTarget       String?               @db.Text
-  specialOwnerText    String?
-  plannedFinishText   String?
-  isPlanned     Boolean        @default(true)
-  planningTreatment PlanningTreatment?
-  relatedPlanItemId String?
-  requirementId String?        // 可选：关联需求
-  projectId     String?        // 可选：关联项目
-  productVersionId String?     // 可选：关联产品版本
-  taskId        String?        // 可选：关联任务
-  assigneeId    String?        // 可选：负责人
-  status        PlanItemStatus @default(TODO)
-  progress      Int            @default(0) // 完成进度 (0-100)
-  sortOrder     Int            @default(0) // 排序权重
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
+model QuarterlyGoal {
+  id                String               @id @default(cuid())
+  quarterlyPlanId   String
+  domain            QuarterlyGoalDomain?
+  quarterlyGoal     String?              @db.Text
+  successCriteria   String?              @db.Text
+  month1Goal        String?              @db.Text
+  month1Status      PlanTrackingStatus?
+  month2Goal        String?              @db.Text
+  month2Status      PlanTrackingStatus?
+  month3Goal        String?              @db.Text
+  month3Status      PlanTrackingStatus?
+  currentCompletion String?              @db.Text
+  achievementRate   Int                  @default(0)
+  quarterlyStatus   PlanTrackingStatus?
+  keyDependencies   String?              @db.Text
+  notes             String?              @db.Text
+  sortOrder         Int                  @default(0)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
-  // 关联关系
-  plan        Plan?        @relation(fields: [planId], references: [id], onDelete: Cascade)
-  productLineTeam ProductLineTeam? @relation(fields: [productLineTeamId], references: [id], onDelete: SetNull)
-  relatedPlanItem PlanItem? @relation("PlanItemRelation", fields: [relatedPlanItemId], references: [id], onDelete: SetNull)
-  relatedChildren PlanItem[] @relation("PlanItemRelation")
-  requirement Requirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
-  project     Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
-  productVersion ProductVersion? @relation(fields: [productVersionId], references: [id], onDelete: SetNull)
-  task        Task?        @relation(fields: [taskId], references: [id], onDelete: SetNull)
-  assignee    User?        @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
-  stages      PlanItemStage[]
+  quarterlyPlan QuarterlyPlan @relation(fields: [quarterlyPlanId], references: [id], onDelete: Cascade)
 
-  @@index([planId])
-  @@index([productLineTeamId])
-  @@index([type])
-  @@index([source])
-  @@index([executionFlow])
-  @@index([specialTaskCategory])
-  @@index([ipType])
-  @@index([isPlanned])
-  @@index([planningTreatment])
-  @@index([relatedPlanItemId])
+  @@index([quarterlyPlanId, sortOrder])
+  @@map("quarterly_goals")
+}
+
+model QuarterlyRisk {
+  id                String               @id @default(cuid())
+  quarterlyPlanId   String
+  riskDescription   String?              @db.Text
+  affectedMilestone String?
+  probability       PlanRiskLevel?
+  impact            PlanRiskLevel?
+  overallLevel      PlanRiskLevel?
+  triggerCondition  String?              @db.Text
+  responseStrategy  String?              @db.Text
+  warningPoint      String?
+  status            QuarterlyRiskStatus?
+  sortOrder         Int                  @default(0)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+
+  quarterlyPlan QuarterlyPlan @relation(fields: [quarterlyPlanId], references: [id], onDelete: Cascade)
+
+  @@index([quarterlyPlanId, sortOrder])
+  @@map("quarterly_risks")
+}
+
+model MonthlyPlan {
+  id                String                @id @default(cuid())
+  productLineTeamId String
+  year              Int
+  month             Int
+  status            PlanPublicationStatus @default(DRAFT)
+  createdById       String
+  updatedById       String
+  publishedAt       DateTime?
+  createdAt         DateTime              @default(now())
+  updatedAt         DateTime              @updatedAt
+
+  productDeliveries    MonthlyProductDelivery[]
+  projectDeliveries    MonthlyProjectDelivery[]
+  marketActions        MonthlyMarketAction[]
+  costOptimizations    MonthlyCostOptimization[]
+  aiProductEnablements MonthlyAiProductEnablement[]
+  aiEfficiencies       MonthlyAiEfficiency[]
+  risks                MonthlyRisk[]
+  resourceRequests     MonthlyResourceRequest[]
+  productLineTeam      ProductLineTeam              @relation(fields: [productLineTeamId], references: [id], onDelete: Cascade)
+  createdBy            User                         @relation("MonthlyPlanCreator", fields: [createdById], references: [id])
+  updatedBy            User                         @relation("MonthlyPlanUpdater", fields: [updatedById], references: [id])
+  managedTasks         ManagedTask[]
+
+  @@unique([productLineTeamId, year, month])
   @@index([status])
-  @@index([assigneeId])
-  @@index([requirementId])
-  @@index([projectId])
-  @@index([productVersionId])
-  @@index([taskId])
-  @@map("plan_items")
+  @@index([year, month])
+  @@map("monthly_plans")
 }
 
-/// 工作项阶段安排
-model PlanItemStage {
-  id          String         @id @default(cuid())
-  planItemId  String
-  group       StageGroup
-  name        String
-  isMilestone Boolean        @default(false)
-  status      PlanItemStatus @default(TODO)
-  plannedTime String?
-  assigneeId  String?
-  sortOrder   Int            @default(0)
-  note        String?        @db.Text
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+model MonthlyProductDelivery {
+  id                    String      @id @default(cuid())
+  monthlyPlanId         String
+  moduleVersion         String?
+  deliveryContent       String?     @db.Text
+  plannedCompletionDate DateTime?
+  sortOrder             Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  monthlyPlan           MonthlyPlan @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
 
-  planItem PlanItem @relation(fields: [planItemId], references: [id], onDelete: Cascade)
-  assignee User?    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
-
-  @@index([planItemId])
-  @@index([group])
-  @@index([isMilestone])
-  @@index([status])
-  @@index([assigneeId])
-  @@map("plan_item_stages")
+  @@index([monthlyPlanId, sortOrder])
+  @@map("monthly_product_deliveries")
 }
 
-/// 任务模型 - 项目中的具体任务
-model Task {
-  id             String     @id @default(cuid())
-  title          String
-  description    String?    @db.Text
-  status         TaskStatus @default(TODO)
-  priority       Priority   @default(MEDIUM)
-  type           TaskType   @default(TASK)
-  projectId      String
-  requirementId  String?    // 可选：关联需求
-  assigneeId     String?    // 可选：负责人
-  createdById    String
-  parentId       String?    // 父任务 ID，用于子任务
-  startDate      DateTime?
-  dueDate        DateTime?
-  estimatedHours Float?     // 预估工时（小时）
-  sortOrder      Int        @default(0) // 排序权重
-  createdAt      DateTime   @default(now())
-  updatedAt      DateTime   @updatedAt
+model MonthlyProjectDelivery {
+  id                    String      @id @default(cuid())
+  monthlyPlanId         String
+  projectName           String?
+  deliveryContent       String?     @db.Text
+  plannedCompletionDate DateTime?
+  customerName          String?
+  sortOrder             Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  monthlyPlan           MonthlyPlan @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
 
-  // 关联关系
-  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  requirement Requirement? @relation(fields: [requirementId], references: [id], onDelete: SetNull)
-  assignee    User?        @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  createdBy   User         @relation("TaskCreator", fields: [createdById], references: [id])
-  // 自关联：父子任务
-  parent      Task?        @relation("TaskHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
-  children    Task[]       @relation("TaskHierarchy")
-  planItems   PlanItem[]
-  timeLogs    TimeLog[]
-  comments    Comment[]
-
-  @@index([status])
-  @@index([priority])
-  @@index([projectId])
-  @@index([requirementId])
-  @@index([assigneeId])
-  @@index([createdById])
-  @@index([parentId])
-  @@index([type])
-  @@map("tasks")
+  @@index([monthlyPlanId, sortOrder])
+  @@map("monthly_project_deliveries")
 }
 
-/// 缺陷模型 - Bug 跟踪
-model Bug {
-  id               String      @id @default(cuid())
-  title            String
-  description      String?     @db.Text
-  status           BugStatus   @default(OPEN)
-  severity         BugSeverity @default(MAJOR)
-  priority         Priority    @default(MEDIUM)
-  projectId        String
-  assigneeId       String?     // 可选：负责人
-  createdById      String
-  environment      String?     // 环境信息（如：Chrome 120, Windows 11）
-  stepsToReproduce String?     @db.Text // 复现步骤
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+model MonthlyMarketAction {
+  id                    String      @id @default(cuid())
+  monthlyPlanId         String
+  productOrProject      String?
+  marketAction          String?     @db.Text
+  outputResult          String?     @db.Text
+  plannedCompletionDate DateTime?
+  sortOrder             Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  monthlyPlan           MonthlyPlan @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
 
-  // 关联关系
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  assignee  User?    @relation("BugAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  createdBy User     @relation("BugCreator", fields: [createdById], references: [id])
-  comments  Comment[]
-
-  @@index([status])
-  @@index([severity])
-  @@index([priority])
-  @@index([projectId])
-  @@index([assigneeId])
-  @@index([createdById])
-  @@map("bugs")
+  @@index([monthlyPlanId, sortOrder])
+  @@map("monthly_market_actions")
 }
 
-/// 工时记录模型
-model TimeLog {
-  id          String   @id @default(cuid())
-  taskId      String
-  userId      String
-  hours       Float    // 记录的工时（小时）
-  description String?  @db.Text // 工作内容描述
-  logDate     DateTime // 工时所属日期
-  createdAt   DateTime @default(now())
+model MonthlyCostOptimization {
+  id                  String      @id @default(cuid())
+  monthlyPlanId       String
+  optimizationItem    String?
+  currentProblem      String?     @db.Text
+  optimizationMeasure String?     @db.Text
+  sortOrder           Int         @default(0)
+  createdAt           DateTime    @default(now())
+  updatedAt           DateTime    @updatedAt
+  monthlyPlan         MonthlyPlan @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
 
-  // 关联关系
-  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([taskId])
-  @@index([userId])
-  @@index([logDate])
-  @@map("time_logs")
+  @@index([monthlyPlanId, sortOrder])
+  @@map("monthly_cost_optimizations")
 }
 
-/// 通知模型
-model Notification {
-  id        String           @id @default(cuid())
-  userId    String
-  type      NotificationType
-  title     String
-  content   String           @db.Text
-  linkUrl   String?          // 关联的页面链接
-  isRead    Boolean          @default(false)
-  createdAt DateTime         @default(now())
+model MonthlyAiProductEnablement {
+  id                    String      @id @default(cuid())
+  monthlyPlanId         String
+  item                  String?
+  outputResult          String?     @db.Text
+  plannedCompletionDate DateTime?
+  sortOrder             Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  monthlyPlan           MonthlyPlan @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
 
-  // 关联关系
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@index([userId])
-  @@index([isRead])
-  @@index([type])
-  @@index([createdAt])
-  @@map("notifications")
+  @@index([monthlyPlanId, sortOrder])
+  @@map("monthly_ai_product_enablements")
 }
 
-/// 评论模型 - 支持对任务、缺陷、需求的评论
-model Comment {
-  id            String   @id @default(cuid())
-  content       String   @db.Text
-  authorId      String
-  taskId        String?  // 可选：关联任务
-  bugId         String?  // 可选：关联缺陷
-  requirementId String?  // 可选：关联需求
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+model MonthlyAiEfficiency {
+  id                    String      @id @default(cuid())
+  monthlyPlanId         String
+  item                  String?
+  outputResult          String?     @db.Text
+  plannedCompletionDate DateTime?
+  sortOrder             Int         @default(0)
+  createdAt             DateTime    @default(now())
+  updatedAt             DateTime    @updatedAt
+  monthlyPlan           MonthlyPlan @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
 
-  // 关联关系
-  author      User         @relation(fields: [authorId], references: [id], onDelete: Cascade)
-  task        Task?        @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  bug         Bug?         @relation(fields: [bugId], references: [id], onDelete: Cascade)
-  requirement Requirement? @relation(fields: [requirementId], references: [id], onDelete: Cascade)
+  @@index([monthlyPlanId, sortOrder])
+  @@map("monthly_ai_efficiencies")
+}
 
-  @@index([authorId])
-  @@index([taskId])
-  @@index([bugId])
-  @@index([requirementId])
-  @@index([createdAt])
-  @@map("comments")
+model MonthlyRisk {
+  id              String         @id @default(cuid())
+  monthlyPlanId   String
+  riskItem        String?
+  riskLevel       PlanRiskLevel?
+  impactScope     String?        @db.Text
+  responseMeasure String?        @db.Text
+  sortOrder       Int            @default(0)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  monthlyPlan     MonthlyPlan    @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
+
+  @@index([monthlyPlanId, sortOrder])
+  @@map("monthly_risks")
+}
+
+model MonthlyResourceRequest {
+  id                String               @id @default(cuid())
+  monthlyPlanId     String
+  requestType       ResourceRequestType?
+  content           String?              @db.Text
+  urgency           PlanRiskLevel?
+  supportDepartment String?
+  sortOrder         Int                  @default(0)
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  monthlyPlan       MonthlyPlan          @relation(fields: [monthlyPlanId], references: [id], onDelete: Cascade)
+
+  @@index([monthlyPlanId, sortOrder])
+  @@map("monthly_resource_requests")
 }
 
 /// 产品线小组模型
@@ -658,17 +603,20 @@ model ProductLineTeam {
   updatedAt   DateTime @updatedAt
 
   // 关联项目
-  projects    Project[]
+  projects Project[]
+
+  // 关联产品线（产品目录，可多小组协作）
+  products Product[] @relation("ProductLineTeamProducts")
 
   // 关联需求
-  requirements Requirement[]
-  plans        Plan[]
-  planItems    PlanItem[]
-  productPlatforms ProductPlatform[]
-  productVersions ProductVersion[]
+  requirements   Requirement[]
+  quarterlyPlans QuarterlyPlan[]
+  monthlyPlans   MonthlyPlan[]
+  managedTasks   ManagedTask[]
+  workCalendars  WorkCalendarYear[]
 
   // 固定成员
-  members     ProductLineMember[]
+  members ProductLineMember[]
 
   // 借入/借出的借调记录
   secondmentsFrom MemberSecondment[] @relation("SecondedFrom")
@@ -677,76 +625,203 @@ model ProductLineTeam {
   @@map("product_line_teams")
 }
 
-/// 产品/平台模型
-model ProductPlatform {
+/// 产品/项目模型
+model Product {
   id          String   @id @default(cuid())
-  name        String
+  name        String   @unique
   description String?  @db.Text
-  productLineTeamId String
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  productLineTeam ProductLineTeam @relation(fields: [productLineTeamId], references: [id], onDelete: Cascade)
-  modules ProductModule[]
+  versions         ProductVersion[]
+  productLineTeams ProductLineTeam[] @relation("ProductLineTeamProducts")
 
-  @@unique([productLineTeamId, name])
-  @@index([productLineTeamId])
-  @@map("product_platforms")
-}
-
-/// 产品板块/模块模型
-model ProductModule {
-  id          String   @id @default(cuid())
-  name        String
-  description String?  @db.Text
-  productPlatformId String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  productPlatform ProductPlatform @relation(fields: [productPlatformId], references: [id], onDelete: Cascade)
-  versions ProductVersion[]
-
-  @@unique([productPlatformId, name])
-  @@index([productPlatformId])
-  @@map("product_modules")
+  @@map("products")
 }
 
 /// 产品版本模型
 model ProductVersion {
-  id          String   @id @default(cuid())
+  id          String               @id @default(cuid())
   title       String
   version     String
-  description String?  @db.Text
+  description String?              @db.Text
   status      ProductVersionStatus @default(PLANNING)
-  productLineTeamId String
-  productModuleId String
+  productId   String
   startDate   DateTime?
   releaseDate DateTime?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
 
-  productLineTeam ProductLineTeam @relation(fields: [productLineTeamId], references: [id], onDelete: Cascade)
-  productModule ProductModule @relation(fields: [productModuleId], references: [id], onDelete: Cascade)
-  planItems PlanItem[]
+  product               Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  ownedOperationRecords OperationRecord[] @relation("OperationRecordProductVersion")
+  fixedOperationRecords OperationRecord[] @relation("OperationRecordFixedProductVersion")
+  managedTasks          ManagedTask[]     @relation("ManagedTaskProductVersion")
 
-  @@unique([productModuleId, version])
-  @@index([productLineTeamId])
-  @@index([productModuleId])
+  @@unique([productId, version])
+  @@index([productId])
   @@index([status])
   @@map("product_versions")
 }
 
+model OperationRecord {
+  id                         String                     @id @default(cuid())
+  sequenceNo                 Int                        @unique @default(autoincrement())
+  ownershipVersionType       OperationVersionType
+  ownershipProductVersionId  String?
+  ownershipProjectVersionId  String?
+  type                       OperationType
+  eventDescription           String                     @db.Text
+  occurredAt                 DateTime
+  reporter                   String
+  status                     OperationStatus            @default(PENDING)
+  operationContent           String                     @db.Text
+  processingStartedAt        DateTime?
+  processingCompletedAt      DateTime?
+  customerConfirmationStatus CustomerConfirmationStatus @default(PENDING)
+  fixVersionType             OperationVersionType?
+  fixProductVersionId        String?
+  fixProjectVersionId        String?
+  followUpActions            String?                    @db.Text
+  notes                      String?                    @db.Text
+  createdById                String
+  createdAt                  DateTime                   @default(now())
+  updatedAt                  DateTime                   @updatedAt
+
+  ownershipProductVersion ProductVersion? @relation("OperationRecordProductVersion", fields: [ownershipProductVersionId], references: [id], onDelete: Restrict)
+  ownershipProjectVersion ProjectVersion? @relation("OperationRecordProjectVersion", fields: [ownershipProjectVersionId], references: [id], onDelete: Restrict)
+  fixProductVersion       ProductVersion? @relation("OperationRecordFixedProductVersion", fields: [fixProductVersionId], references: [id], onDelete: SetNull)
+  fixProjectVersion       ProjectVersion? @relation("OperationRecordFixedProjectVersion", fields: [fixProjectVersionId], references: [id], onDelete: SetNull)
+  createdBy               User            @relation("OperationRecordCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  handlers                User[]          @relation("OperationRecordHandlers")
+
+  @@index([ownershipVersionType])
+  @@index([ownershipProductVersionId])
+  @@index([ownershipProjectVersionId])
+  @@index([type])
+  @@index([status])
+  @@index([occurredAt])
+  @@map("operation_records")
+}
+
+model ManagedTask {
+  id                String                      @id @default(cuid())
+  sequenceNo        Int                         @unique @default(autoincrement())
+  title             String
+  description       String?                     @db.Text
+  level             Int
+  parentId          String?
+  category          ManagedTaskCategory?
+  sdlcNode          ManagedTaskSdlcNode?
+  status            ManagedTaskStatus           @default(UNSCHEDULED)
+  planStartDate     DateTime?
+  planEndDate       DateTime?
+  plannedWorkdays   Float                       @default(0)
+  progressPercent   Int                         @default(0)
+  actualStartAt     DateTime?
+  actualFinishAt    DateTime?
+  actualWorkdays    Float                       @default(0)
+  executorId        String?
+  productLineTeamId String
+  monthlyPlanId     String?
+  monthlyItemType   ManagedTaskMonthlyItemType?
+  monthlyItemId     String?
+  versionType       ManagedTaskVersionType?
+  productVersionId  String?
+  projectVersionId  String?
+  notes             String?                     @db.Text
+  createdById       String
+  createdAt         DateTime                    @default(now())
+  updatedAt         DateTime                    @updatedAt
+
+  parent          ManagedTask?           @relation("ManagedTaskHierarchy", fields: [parentId], references: [id], onDelete: SetNull)
+  children        ManagedTask[]          @relation("ManagedTaskHierarchy")
+  createdBy       User                   @relation("ManagedTaskCreator", fields: [createdById], references: [id], onDelete: Restrict)
+  executor        User?                  @relation("ManagedTaskExecutor", fields: [executorId], references: [id], onDelete: SetNull)
+  productLineTeam ProductLineTeam        @relation(fields: [productLineTeamId], references: [id], onDelete: Restrict)
+  monthlyPlan     MonthlyPlan?           @relation(fields: [monthlyPlanId], references: [id], onDelete: SetNull)
+  productVersion  ProductVersion?        @relation("ManagedTaskProductVersion", fields: [productVersionId], references: [id], onDelete: SetNull)
+  projectVersion  ProjectVersion?        @relation("ManagedTaskProjectVersion", fields: [projectVersionId], references: [id], onDelete: SetNull)
+  statusLogs      ManagedTaskStatusLog[]
+
+  @@index([parentId])
+  @@index([level])
+  @@index([category])
+  @@index([status])
+  @@index([executorId])
+  @@index([productLineTeamId])
+  @@index([monthlyPlanId])
+  @@index([productVersionId])
+  @@index([projectVersionId])
+  @@index([planStartDate, planEndDate])
+  @@map("managed_tasks")
+}
+
+
+model ManagedTaskStatusLog {
+  id          String             @id @default(cuid())
+  taskId      String
+  fromStatus  ManagedTaskStatus?
+  toStatus    ManagedTaskStatus
+  changedById String
+  changedAt   DateTime           @default(now())
+  note        String?            @db.Text
+
+  task      ManagedTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  changedBy User        @relation(fields: [changedById], references: [id], onDelete: Restrict)
+
+  @@index([taskId])
+  @@index([changedById])
+  @@index([changedAt])
+  @@map("managed_task_status_logs")
+}
+
+model WorkCalendarYear {
+  id                String             @id @default(cuid())
+  productLineTeamId String?
+  year              Int
+  status            WorkCalendarStatus @default(DRAFT)
+  standardHours     Float              @default(8)
+  publishedAt       DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+
+  productLineTeam ProductLineTeam?  @relation(fields: [productLineTeamId], references: [id], onDelete: Cascade)
+  days            WorkCalendarDay[]
+
+  @@unique([productLineTeamId, year])
+  @@index([year])
+  @@index([status])
+  @@map("work_calendar_years")
+}
+
+model WorkCalendarDay {
+  id             String              @id @default(cuid())
+  calendarYearId String
+  date           DateTime
+  type           WorkCalendarDayType
+  standardHours  Float?
+  label          String?
+  notes          String?             @db.Text
+
+  calendarYear WorkCalendarYear @relation(fields: [calendarYearId], references: [id], onDelete: Cascade)
+
+  @@unique([calendarYearId, date])
+  @@index([date])
+  @@index([type])
+  @@map("work_calendar_days")
+}
+
 /// 产品线小组固定成员模型
 model ProductLineMember {
-  id         String          @id @default(cuid())
-  teamId     String
-  userId     String
-  role       ProductLineRole
-  joinedAt   DateTime        @default(now())
+  id       String          @id @default(cuid())
+  teamId   String
+  userId   String
+  role     ProductLineRole
+  joinedAt DateTime        @default(now())
 
   // 关联关系
-  team       ProductLineTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
-  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team ProductLineTeam @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  user User            @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([teamId, userId]) // 每个成员在小组里是唯一的
   @@index([teamId])
@@ -756,21 +831,21 @@ model ProductLineMember {
 
 /// 人员临时借调记录模型
 model MemberSecondment {
-  id          String           @id @default(cuid())
-  userId      String           // 借调的人员 ID
-  fromTeamId  String?          // 借出的原小组 ID (可选)
-  toTeamId    String           // 借入的目标小组 ID
-  role        ProductLineRole  // 借调期间在目标小组担任的角色
-  startDate   DateTime         // 借调开始时间
-  endDate     DateTime?        // 借调结束时间
-  status      SecondmentStatus @default(ACTIVE)
-  createdAt   DateTime         // 登记时间
-  updatedAt   DateTime         @updatedAt
+  id         String           @id @default(cuid())
+  userId     String // 借调的人员 ID
+  fromTeamId String? // 借出的原小组 ID (可选)
+  toTeamId   String // 借入的目标小组 ID
+  role       ProductLineRole // 借调期间在目标小组担任的角色
+  startDate  DateTime // 借调开始时间
+  endDate    DateTime? // 借调结束时间
+  status     SecondmentStatus @default(ACTIVE)
+  createdAt  DateTime // 登记时间
+  updatedAt  DateTime         @updatedAt
 
   // 关联关系
-  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  fromTeam    ProductLineTeam? @relation("SecondedFrom", fields: [fromTeamId], references: [id], onDelete: SetNull)
-  toTeam      ProductLineTeam  @relation("SecondedTo", fields: [toTeamId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fromTeam ProductLineTeam? @relation("SecondedFrom", fields: [fromTeamId], references: [id], onDelete: SetNull)
+  toTeam   ProductLineTeam  @relation("SecondedTo", fields: [toTeamId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([fromTeamId])
@@ -778,3 +853,26 @@ model MemberSecondment {
   @@index([status])
   @@map("member_secondments")
 }
+
+/// 系统审计日志模型 - 记录用户操作
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?  // 操作用户 ID (可选，支持物理删除/游客)
+  username  String   // 操作账号 (记录当时的值)
+  name      String   // 用户姓名 (记录当时的值)
+  action    String   // 操作类型 (如: "CREATE", "UPDATE", "DELETE", "LOGIN")
+  module    String   // 业务模块 (如: "PROJECT", "WBS", "REQUIREMENT", "USER")
+  details   String   @db.Text // 操作详情
+  ip        String?  // 访问 IP 地址
+  createdAt DateTime @default(now())
+
+  // 关系定义
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([action])
+  @@index([module])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+

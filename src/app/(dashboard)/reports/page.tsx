@@ -5,14 +5,17 @@ import ReportsClient from "@/components/reports/reports-client";
 import { BarChart3 } from "lucide-react";
 
 export const metadata = {
-  title: "AI2PmP - 报表统计",
-  description: "内部研发项目管理系统 - 项目工时分析与统计报表",
+  title: "SDLC · 报表统计",
+  description: "SDLC · 研发效能平台 - 项目工时分析与统计报表",
 };
 
 export default async function ReportsPage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
+  }
+  if (!session.user.isAdmin) {
+    redirect("/");
   }
 
   const result = await getTimeLogsSummary();

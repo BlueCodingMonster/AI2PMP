@@ -14,6 +14,8 @@ export const memberCreateSchema = z.object({
   password: z.string().min(6, "密码至少6个字符"),
   phone: z.string().optional().nullable(),
   department: z.string().optional().nullable(),
+  level: z.string().max(50).optional().nullable(),
+  position: z.string().max(50).optional().nullable(),
   isAdmin: z.boolean().optional().default(false),
   isActive: z.boolean().optional().default(true),
 });
@@ -25,6 +27,8 @@ export const memberUpdateSchema = z.object({
   username: usernameSchema,
   phone: z.string().optional().nullable(),
   department: z.string().optional().nullable(),
+  level: z.string().max(50).optional().nullable(),
+  position: z.string().max(50).optional().nullable(),
   isAdmin: z.boolean().optional(),
   isActive: z.boolean().optional(),
 });

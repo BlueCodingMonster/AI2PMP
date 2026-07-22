@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useTransition } from "react";
 import { createMember, updateMember } from "@/actions/team";
 import { Loader2, X } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -8,48 +8,35 @@ import { useRouter } from "next/navigation";
 interface MemberModalProps {
   isOpen: boolean;
   onClose: () => void;
-  editData?: any; // 如果是编辑模式，传入当前用户信息
+  editData?: MemberEditData; // 如果是编辑模式，传入当前用户信息
+  isViewOnly?: boolean;      // 是否仅用于查看
 }
 
-export default function MemberModal({ isOpen, onClose, editData }: MemberModalProps) {
+export type MemberEditData = {
+  id: string; name: string; username: string; phone: string | null; department: string | null;
+  level: string | null; position: string | null; isAdmin: boolean; isActive: boolean;
+};
+
+export default function MemberModal({ isOpen, onClose, editData, isViewOnly = false }: MemberModalProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const isEditMode = !!editData;
 
   // 表单状态
-  const [name, setName] = useState("");
-  const [username, setUsername] = useState("");
+  const [name, setName] = useState(editData?.name ?? "");
+  const [username, setUsername] = useState(editData?.username ?? "");
   const [password, setPassword] = useState("");
-  const [phone, setPhone] = useState("");
-  const [department, setDepartment] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [isActive, setIsActive] = useState(true);
+  const [phone, setPhone] = useState(editData?.phone ?? "");
+  const [department, setDepartment] = useState(editData?.department ?? "");
+  const [level, setLevel] = useState(editData?.level ?? "");
+  const [position, setPosition] = useState(editData?.position ?? "");
+  const [isAdmin, setIsAdmin] = useState(editData?.isAdmin ?? false);
+  const [isActive, setIsActive] = useState(editData?.isActive ?? true);
   const [error, setError] = useState<string | null>(null);
-
-  // 初始化
-  useEffect(() => {
-    if (editData) {
-      setName(editData.name || "");
-      setUsername(editData.username || "");
-      setPassword(""); // 编辑时不输入密码则代表不修改
-      setPhone(editData.phone || "");
-      setDepartment(editData.department || "");
-      setIsAdmin(editData.isAdmin || false);
-      setIsActive(editData.isActive || false);
-    } else {
-      setName("");
-      setUsername("");
-      setPassword("");
-      setPhone("");
-      setDepartment("");
-      setIsAdmin(false);
-      setIsActive(true);
-    }
-    setError(null);
-  }, [editData, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isViewOnly) return;
     setError(null);
 
     if (!name.trim()) {
@@ -78,6 +65,8 @@ export default function MemberModal({ isOpen, onClose, editData }: MemberModalPr
             username: username.trim().toLowerCase(),
             phone: phone.trim() || undefined,
             department: department.trim() || undefined,
+            level: level.trim() || undefined,
+            position: position.trim() || undefined,
             isAdmin,
             isActive,
           };
@@ -89,6 +78,8 @@ export default function MemberModal({ isOpen, onClose, editData }: MemberModalPr
             password: password,
             phone: phone.trim() || undefined,
             department: department.trim() || undefined,
+            level: level.trim() || undefined,
+            position: position.trim() || undefined,
             isAdmin,
             isActive,
           };
@@ -117,7 +108,7 @@ export default function MemberModal({ isOpen, onClose, editData }: MemberModalPr
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-border/60 pb-3">
           <h3 className="text-base font-semibold text-white">
-            {isEditMode ? `修改成员 - ${editData.name}` : "录入团队成员"}
+            {isViewOnly ? `查看成员信息 - ${editData?.name}` : isEditMode ? `修改成员 - ${editData.name}` : "录入团队成员"}
           </h3>
           <button
             onClick={onClose}
@@ -136,33 +127,45 @@ export default function MemberModal({ isOpen, onClose, editData }: MemberModalPr
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           {/* 姓名 */}
           <div className="space-y-1.5">
-            <label className="text-muted-foreground font-medium">真实姓名 *</label>
-            <input
-              type="text"
-              required
-              placeholder="请输入成员姓名"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-border bg-input py-2 px-4 text-white focus:border-primary focus:outline-none"
-            />
+            <label className="text-muted-foreground font-medium">真实姓名 {!isViewOnly && "*"}</label>
+            {isViewOnly ? (
+              <div className="w-full rounded-lg border border-border/60 bg-muted/20 py-2 px-4 text-white/80">
+                {name}
+              </div>
+            ) : (
+              <input
+                type="text"
+                required
+                placeholder="请输入成员姓名"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-lg border border-border bg-input py-2 px-4 text-white focus:border-primary focus:outline-none"
+              />
+            )}
           </div>
 
           {/* 登录名 */}
           <div className="space-y-1.5">
-            <label className="text-muted-foreground font-medium">登录名 *</label>
-            <input
-              type="text"
-              required
-              autoComplete="username"
-              placeholder="例如: zhanghua"
-              value={username}
-              onChange={(e) => setUsername(e.target.value)}
-              className="w-full rounded-lg border border-border bg-input py-2 px-4 text-white focus:border-primary focus:outline-none"
-            />
+            <label className="text-muted-foreground font-medium">登录名 {!isViewOnly && "*"}</label>
+            {isViewOnly ? (
+              <div className="w-full rounded-lg border border-border/60 bg-muted/20 py-2 px-4 text-white/80">
+                {username}
+              </div>
+            ) : (
+              <input
+                type="text"
+                required
+                autoComplete="username"
+                placeholder="例如: zhanghua"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                className="w-full rounded-lg border border-border bg-input py-2 px-4 text-white focus:border-primary focus:outline-none"
+              />
+            )}
           </div>
 
-          {/* 密码（新增模式必填，编辑模式不填代表不修改） */}
-          {!isEditMode && (
+          {/* 密码（新增模式必填，编辑模式不填代表不修改，查看模式不显示） */}
+          {!isEditMode && !isViewOnly && (
             <div className="space-y-1.5">
               <label className="text-muted-foreground font-medium">初始密码 *</label>
               <input
@@ -179,43 +182,81 @@ export default function MemberModal({ isOpen, onClose, editData }: MemberModalPr
           {/* 电话 */}
           <div className="space-y-1.5">
             <label className="text-muted-foreground font-medium">联系电话</label>
-            <input
-              type="text"
-              placeholder="例如: 13800138000"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              className="w-full rounded-lg border border-border bg-input py-2 px-4 text-white focus:border-primary focus:outline-none"
-            />
+            {isViewOnly ? (
+              <div className="w-full rounded-lg border border-border/60 bg-muted/20 py-2 px-4 text-white/80">
+                {phone || "未录入电话"}
+              </div>
+            ) : (
+              <input
+                type="text"
+                placeholder="例如: 13800138000"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full rounded-lg border border-border bg-input py-2 px-4 text-white focus:border-primary focus:outline-none"
+              />
+            )}
           </div>
 
           {/* 部门 */}
           <div className="space-y-1.5">
             <label className="text-muted-foreground font-medium">所属部门</label>
-            <input
-              type="text"
-              placeholder="例如: 产品部、研发二组、质保中心"
-              value={department}
-              onChange={(e) => setDepartment(e.target.value)}
-              className="w-full rounded-lg border border-border bg-input py-2 px-4 text-white focus:border-primary focus:outline-none"
-            />
+            {isViewOnly ? (
+              <div className="w-full rounded-lg border border-border/60 bg-muted/20 py-2 px-4 text-white/80">
+                {department || "未设定部门"}
+              </div>
+            ) : (
+              <input
+                type="text"
+                placeholder="例如: 产品部、研发二组、质保中心"
+                value={department}
+                onChange={(e) => setDepartment(e.target.value)}
+                className="w-full rounded-lg border border-border bg-input py-2 px-4 text-white focus:border-primary focus:outline-none"
+              />
+            )}
+          </div>
+
+          {/* 权限及激活状态选项 */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <label className="font-medium text-muted-foreground">人员层级</label>
+              {isViewOnly ? (
+                <div className="w-full rounded-lg border border-border/60 bg-muted/20 py-2 px-4 text-white/80">
+                  {level || "未设定层级"}
+                </div>
+              ) : (
+                <input type="text" placeholder="例如：部门经理、员工" value={level} onChange={(e) => setLevel(e.target.value)} className="w-full rounded-lg border border-border bg-input px-4 py-2 text-white focus:border-primary focus:outline-none" />
+              )}
+            </div>
+            <div className="space-y-1.5">
+              <label className="font-medium text-muted-foreground">专业岗位</label>
+              {isViewOnly ? (
+                <div className="w-full rounded-lg border border-border/60 bg-muted/20 py-2 px-4 text-white/80">
+                  {position || "未设定岗位"}
+                </div>
+              ) : (
+                <input type="text" placeholder="例如：后端开发" value={position} onChange={(e) => setPosition(e.target.value)} className="w-full rounded-lg border border-border bg-input px-4 py-2 text-white focus:border-primary focus:outline-none" />
+              )}
+            </div>
           </div>
 
           {/* 权限及激活状态选项 */}
           <div className="flex flex-wrap gap-4 pt-2">
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className={`flex items-center gap-2 ${isViewOnly ? "cursor-default" : "cursor-pointer"}`}>
               <input
                 type="checkbox"
                 checked={isAdmin}
+                disabled={isViewOnly}
                 onChange={(e) => setIsAdmin(e.target.checked)}
                 className="rounded border-border bg-input text-indigo-600 focus:ring-primary h-4.5 w-4.5"
               />
               <span className="text-muted-foreground font-medium">设为系统管理员</span>
             </label>
 
-            <label className="flex items-center gap-2 cursor-pointer">
+            <label className={`flex items-center gap-2 ${isViewOnly ? "cursor-default" : "cursor-pointer"}`}>
               <input
                 type="checkbox"
                 checked={isActive}
+                disabled={isViewOnly}
                 onChange={(e) => setIsActive(e.target.checked)}
                 className="rounded border-border bg-input text-indigo-600 focus:ring-primary h-4.5 w-4.5"
               />
@@ -225,21 +266,33 @@ export default function MemberModal({ isOpen, onClose, editData }: MemberModalPr
 
           {/* 按钮行 */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border/60">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg border border-border bg-input px-4 py-2 font-medium text-white hover:bg-muted"
-            >
-              取消
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 font-medium text-white shadow-lg disabled:opacity-50"
-            >
-              {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-              {isEditMode ? "确认保存" : "确认录入"}
-            </button>
+            {isViewOnly ? (
+              <button
+                type="button"
+                onClick={onClose}
+                className="rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-5 py-2 font-medium text-white shadow-lg hover:from-indigo-500 hover:to-purple-500"
+              >
+                关闭
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-lg border border-border bg-input px-4 py-2 font-medium text-white hover:bg-muted"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  disabled={isPending}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 font-medium text-white shadow-lg disabled:opacity-50"
+                >
+                  {isPending && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                  {isEditMode ? "确认保存" : "确认录入"}
+                </button>
+              </>
+            )}
           </div>
         </form>
       </div>

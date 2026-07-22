@@ -1,446 +1,192 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ProductVersionStatus } from "@prisma/client";
-import {
-  Boxes,
-  GitBranch,
-  Layers3,
-  Loader2,
-  PackagePlus,
-  Plus,
-} from "lucide-react";
-import {
-  createProductModule,
-  createProductPlatform,
-  createProductVersion,
-  updateProductVersionStatus,
-} from "@/actions/product-lines";
+import { Box, Boxes, Check, GitBranch, Loader2, PackagePlus, Pencil, Plus, Search, Trash2, X } from "lucide-react";
+import { createProduct, createProductVersion, deleteProduct, deleteProductVersion, updateProduct, updateProductVersion } from "@/actions/product-lines";
 
-type VersionTree = Array<{
+type ProductTree = Array<{
   id: string;
   name: string;
   description: string | null;
-  modules: Array<{
+  versions: Array<{
     id: string;
-    name: string;
-    description: string | null;
-    versions: Array<{
-      id: string;
-      title: string;
-      version: string;
-      description: string | null;
-      status: ProductVersionStatus;
-      startDate: Date | string | null;
-      releaseDate: Date | string | null;
-      _count: { planItems: number };
-    }>;
+    version: string;
   }>;
 }>;
 
-interface ProductVersionsManagerProps {
-  teamId: string;
-  versionTree: VersionTree;
-}
+const inputClass = "rounded-lg border border-border bg-input px-3 py-2 text-white outline-none transition focus:border-cyan-500/60";
 
-const statusLabels: Record<ProductVersionStatus, string> = {
-  PLANNING: "规划中",
-  DESIGNING: "设计中",
-  DEVELOPING: "研发中",
-  TESTING: "测试中",
-  RELEASED: "已发布",
-  DELAYED: "已延期",
-  CANCELLED: "已取消",
-};
-
-const statusClasses: Record<ProductVersionStatus, string> = {
-  PLANNING: "border-slate-500/30 bg-slate-500/10 text-slate-300",
-  DESIGNING: "border-cyan-500/30 bg-cyan-500/10 text-cyan-300",
-  DEVELOPING: "border-indigo-500/30 bg-indigo-500/10 text-indigo-300",
-  TESTING: "border-amber-500/30 bg-amber-500/10 text-amber-300",
-  RELEASED: "border-emerald-500/30 bg-emerald-500/10 text-emerald-300",
-  DELAYED: "border-rose-500/30 bg-rose-500/10 text-rose-300",
-  CANCELLED: "border-zinc-500/30 bg-zinc-500/10 text-zinc-300",
-};
-
-function formatDate(value: Date | string | null) {
-  if (!value) return "";
-  return new Date(value).toLocaleDateString("zh-CN");
-}
-
-export default function ProductVersionsManager({ teamId, versionTree }: ProductVersionsManagerProps) {
+export default function ProductVersionsManager({ versionTree }: { versionTree: ProductTree }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-
-  const [platformName, setPlatformName] = useState("");
-  const [platformDescription, setPlatformDescription] = useState("");
-
-  const [modulePlatformId, setModulePlatformId] = useState(versionTree[0]?.id ?? "");
-  const [moduleName, setModuleName] = useState("");
-  const [moduleDescription, setModuleDescription] = useState("");
-
-  const moduleOptions = useMemo(
-    () =>
-      versionTree.flatMap((platform) =>
-        platform.modules.map((module) => ({
-          id: module.id,
-          name: module.name,
-          platformName: platform.name,
-        }))
-      ),
-    [versionTree]
-  );
-
-  const [versionModuleId, setVersionModuleId] = useState(moduleOptions[0]?.id ?? "");
-  const [versionTitle, setVersionTitle] = useState("");
+  const [query, setQuery] = useState("");
+  const [selectedProductId, setSelectedProductId] = useState(versionTree[0]?.id ?? "");
+  const [showProductForm, setShowProductForm] = useState(false);
+  const [editingProductId, setEditingProductId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [productName, setProductName] = useState("");
+  const [productDescription, setProductDescription] = useState("");
   const [versionNo, setVersionNo] = useState("");
-  const [versionDescription, setVersionDescription] = useState("");
-  const [versionStatus, setVersionStatus] = useState<ProductVersionStatus>(ProductVersionStatus.PLANNING);
-  const [startDate, setStartDate] = useState("");
-  const [releaseDate, setReleaseDate] = useState("");
+  const [editingVersionId, setEditingVersionId] = useState<string | null>(null);
+  const [editVersionNo, setEditVersionNo] = useState("");
 
-  const submitPlatform = (event: React.FormEvent) => {
-    event.preventDefault();
-    setError(null);
+  useEffect(() => {
+    if (!versionTree.some((product) => product.id === selectedProductId)) setSelectedProductId(versionTree[0]?.id ?? "");
+  }, [selectedProductId, versionTree]);
 
+  const filteredProducts = useMemo(() => {
+    const keyword = query.trim().toLowerCase();
+    return keyword ? versionTree.filter((product) => product.name.toLowerCase().includes(keyword)) : versionTree;
+  }, [query, versionTree]);
+  const selectedProduct = versionTree.find((product) => product.id === selectedProductId) ?? versionTree[0];
+  const totalVersions = versionTree.reduce((sum, product) => sum + product.versions.length, 0);
+
+  const submitProduct = (event: React.FormEvent) => {
+    event.preventDefault(); setError(null);
     startTransition(async () => {
-      const result = await createProductPlatform({
-        productLineTeamId: teamId,
-        name: platformName,
-        description: platformDescription || null,
-      });
-
-      if (!result.success) {
-        setError(result.error ?? "新增产品/平台失败");
-        return;
-      }
-
-      setPlatformName("");
-      setPlatformDescription("");
-      router.refresh();
-    });
-  };
-
-  const submitModule = (event: React.FormEvent) => {
-    event.preventDefault();
-    setError(null);
-
-    startTransition(async () => {
-      const result = await createProductModule({
-        productPlatformId: modulePlatformId,
-        name: moduleName,
-        description: moduleDescription || null,
-      });
-
-      if (!result.success) {
-        setError(result.error ?? "新增板块/模块失败");
-        return;
-      }
-
-      setModuleName("");
-      setModuleDescription("");
-      router.refresh();
+      const result = await createProduct({ name: productName, description: productDescription || null });
+      if (!result.success) return setError(result.error ?? "新增产品失败");
+      setProductName(""); setProductDescription(""); setShowProductForm(false); router.refresh();
     });
   };
 
   const submitVersion = (event: React.FormEvent) => {
-    event.preventDefault();
-    setError(null);
-
+    event.preventDefault(); setError(null);
+    if (!selectedProduct) return setError("请先选择产品");
     startTransition(async () => {
       const result = await createProductVersion({
-        productLineTeamId: teamId,
-        productModuleId: versionModuleId,
-        title: versionTitle,
-        version: versionNo,
-        description: versionDescription || null,
-        status: versionStatus,
-        startDate: startDate || null,
-        releaseDate: releaseDate || null,
+        productId: selectedProduct.id, version: versionNo,
       });
+      if (!result.success) return setError(result.error ?? "新增版本失败");
+      setVersionNo(""); router.refresh();
+    });
+  };
 
-      if (!result.success) {
-        setError(result.error ?? "新增产品版本失败");
-        return;
-      }
+  const beginEdit = (product: ProductTree[number]) => {
+    setEditingProductId(product.id); setEditName(product.name); setEditDescription(product.description ?? ""); setError(null);
+  };
 
-      setVersionTitle("");
-      setVersionNo("");
-      setVersionDescription("");
-      setVersionStatus(ProductVersionStatus.PLANNING);
-      setStartDate("");
-      setReleaseDate("");
+  const submitEdit = (event: React.FormEvent, productId: string) => {
+    event.preventDefault(); setError(null);
+    startTransition(async () => {
+      const result = await updateProduct(productId, { name: editName, description: editDescription || null });
+      if (!result.success) return setError(result.error ?? "编辑产品失败");
+      setEditingProductId(null); router.refresh();
+    });
+  };
+
+  const removeProduct = (product: ProductTree[number]) => {
+    if (!window.confirm(`确认删除“${product.name}”及其全部 ${product.versions.length} 个版本吗？此操作不可恢复。`)) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteProduct(product.id);
+      if (!result.success) return setError(result.error ?? "删除产品失败");
+      if (selectedProductId === product.id) setSelectedProductId("");
       router.refresh();
     });
   };
 
-  const changeStatus = (versionId: string, status: ProductVersionStatus) => {
-    setError(null);
-
+  const submitVersionEdit = (event: React.FormEvent, versionId: string) => {
+    event.preventDefault(); setError(null);
     startTransition(async () => {
-      const result = await updateProductVersionStatus(versionId, { status });
-      if (!result.success) {
-        setError(result.error ?? "更新产品版本状态失败");
-        return;
-      }
+      const result = await updateProductVersion(versionId, { version: editVersionNo });
+      if (!result.success) return setError(result.error ?? "编辑版本失败");
+      setEditingVersionId(null); router.refresh();
+    });
+  };
+
+  const removeVersion = (version: ProductTree[number]["versions"][number]) => {
+    if (!window.confirm(`确认删除版本“${version.version}”吗？此操作不可恢复。`)) return;
+    setError(null);
+    startTransition(async () => {
+      const result = await deleteProductVersion(version.id);
+      if (!result.success) return setError(result.error ?? "删除版本失败");
       router.refresh();
     });
   };
 
   return (
-    <section className="glass rounded-xl p-6 space-y-5 text-xs sm:text-sm">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/40 pb-4">
-        <div>
-          <h2 className="flex items-center gap-2 text-base font-semibold text-white">
-            <GitBranch className="h-4 w-4 text-cyan-400" />
-            产品版本维护
-          </h2>
-          <p className="mt-1 text-xs text-muted-foreground">
-            在这里维护产品/平台、板块/模块和版本迭代；季度计划目标项可以选择关联到具体版本。
-          </p>
+    <div className="space-y-4 animate-fade-in">
+      <header className="flex flex-col gap-3 border-b border-border/60 pb-4 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex items-start gap-3">
+          <div className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-cyan-500/10 text-cyan-300"><Boxes className="h-4 w-4" /></div>
+          <div><h1 className="text-xl font-bold leading-9 tracking-tight text-white">产品线管理</h1><p className="mt-0.5 text-xs text-muted-foreground">全局维护产品及版本，一个产品可包含多个版本。</p></div>
         </div>
-        <span className="rounded border border-cyan-500/20 bg-cyan-500/10 px-2 py-1 text-[10px] font-semibold text-cyan-300">
-          {versionTree.length} 个产品/平台
-        </span>
-      </div>
-
-      {error && (
-        <div className="rounded-lg border border-red-500/20 bg-red-500/10 p-3 text-xs text-red-300">
-          {error}
+        <div className="flex gap-2 text-[11px]">
+          <span className="rounded-md border border-border bg-white/[0.03] px-2.5 py-1.5 text-muted-foreground"><strong className="mr-1 text-white">{versionTree.length}</strong>产品</span>
+          <span className="rounded-md border border-border bg-white/[0.03] px-2.5 py-1.5 text-muted-foreground"><strong className="mr-1 text-white">{totalVersions}</strong>版本</span>
         </div>
-      )}
+      </header>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
-        <form onSubmit={submitPlatform} className="rounded-lg border border-border/50 bg-black/10 p-4 space-y-3">
-          <h3 className="flex items-center gap-2 font-semibold text-white">
-            <PackagePlus className="h-4 w-4 text-cyan-400" />
-            新增产品/平台
-          </h3>
-          <input
-            required
-            value={platformName}
-            onChange={(event) => setPlatformName(event.target.value)}
-            placeholder="如：大陆通平台、能源管控中心"
-            className="w-full rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-          />
-          <textarea
-            rows={2}
-            value={platformDescription}
-            onChange={(event) => setPlatformDescription(event.target.value)}
-            placeholder="范围说明，可选"
-            className="w-full resize-none rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-          />
-          <button
-            type="submit"
-            disabled={isPending}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-3 py-2 font-semibold text-white hover:bg-cyan-500 disabled:opacity-50"
-          >
-            {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            新增产品/平台
-          </button>
-        </form>
+      {error && <div className="rounded-lg border border-red-500/20 bg-red-500/10 px-3 py-2 text-xs text-red-300">{error}</div>}
 
-        <form onSubmit={submitModule} className="rounded-lg border border-border/50 bg-black/10 p-4 space-y-3">
-          <h3 className="flex items-center gap-2 font-semibold text-white">
-            <Layers3 className="h-4 w-4 text-indigo-400" />
-            新增板块/模块
-          </h3>
-          <select
-            required
-            value={modulePlatformId}
-            onChange={(event) => setModulePlatformId(event.target.value)}
-            className="w-full rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-          >
-            <option value="">选择所属产品/平台</option>
-            {versionTree.map((platform) => (
-              <option key={platform.id} value={platform.id}>
-                {platform.name}
-              </option>
-            ))}
-          </select>
-          <input
-            required
-            value={moduleName}
-            onChange={(event) => setModuleName(event.target.value)}
-            placeholder="如：日志管理、资金账户"
-            className="w-full rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-          />
-          <textarea
-            rows={2}
-            value={moduleDescription}
-            onChange={(event) => setModuleDescription(event.target.value)}
-            placeholder="模块边界说明，可选"
-            className="w-full resize-none rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-          />
-          <button
-            type="submit"
-            disabled={isPending || !modulePlatformId}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white hover:bg-indigo-500 disabled:opacity-50"
-          >
-            {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            新增板块/模块
-          </button>
-        </form>
-
-        <form onSubmit={submitVersion} className="rounded-lg border border-border/50 bg-black/10 p-4 space-y-3">
-          <h3 className="flex items-center gap-2 font-semibold text-white">
-            <Boxes className="h-4 w-4 text-emerald-400" />
-            新增版本
-          </h3>
-          <select
-            required
-            value={versionModuleId}
-            onChange={(event) => setVersionModuleId(event.target.value)}
-            className="w-full rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-          >
-            <option value="">选择所属板块/模块</option>
-            {moduleOptions.map((module) => (
-              <option key={module.id} value={module.id}>
-                {module.platformName} / {module.name}
-              </option>
-            ))}
-          </select>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-            <input
-              required
-              value={versionTitle}
-              onChange={(event) => setVersionTitle(event.target.value)}
-              placeholder="版本标题"
-              className="w-full rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-            />
-            <input
-              required
-              value={versionNo}
-              onChange={(event) => setVersionNo(event.target.value)}
-              placeholder="版本号，如 v1.2.0"
-              className="w-full rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-            />
+      <div className="grid min-h-[620px] grid-cols-1 overflow-hidden rounded-xl border border-border/60 bg-black/10 lg:grid-cols-[300px_minmax(0,1fr)]">
+        <aside className="border-b border-border/60 bg-black/10 p-3 lg:border-b-0 lg:border-r">
+          <div className="mb-3 flex items-center justify-between px-1">
+            <div><h2 className="text-sm font-semibold text-white">产品列表</h2><p className="mt-0.5 text-[10px] text-muted-foreground">选择产品维护版本</p></div>
+            <button onClick={() => setShowProductForm((value) => !value)} className="inline-flex h-8 items-center gap-1 rounded-md bg-cyan-600 px-2.5 text-[11px] font-semibold text-white hover:bg-cyan-500"><Plus className="h-3.5 w-3.5" />产品</button>
           </div>
-          <textarea
-            rows={2}
-            value={versionDescription}
-            onChange={(event) => setVersionDescription(event.target.value)}
-            placeholder="版本目标说明，可选"
-            className="w-full resize-none rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-          />
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <select
-              value={versionStatus}
-              onChange={(event) => setVersionStatus(event.target.value as ProductVersionStatus)}
-              className="rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-            >
-              {Object.entries(statusLabels).map(([value, label]) => (
-                <option key={value} value={value}>
-                  {label}
-                </option>
-              ))}
-            </select>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(event) => setStartDate(event.target.value)}
-              className="rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-            />
-            <input
-              type="date"
-              value={releaseDate}
-              onChange={(event) => setReleaseDate(event.target.value)}
-              className="rounded-lg border border-border bg-input px-3 py-2 text-white outline-none focus:border-primary"
-            />
-          </div>
-          <button
-            type="submit"
-            disabled={isPending || !versionModuleId}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-3 py-2 font-semibold text-white hover:bg-emerald-500 disabled:opacity-50"
-          >
-            {isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            新增版本
-          </button>
-        </form>
-      </div>
 
-      <div className="space-y-4">
-        {versionTree.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-border/70 py-8 text-center text-xs text-muted-foreground">
-            当前产品线还没有维护产品/平台。先新增产品/平台，再新增模块和版本。
-          </div>
-        ) : (
-          versionTree.map((platform) => (
-            <div key={platform.id} className="rounded-lg border border-border/50 bg-black/10 p-4">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <h3 className="font-semibold text-white">{platform.name}</h3>
-                  {platform.description && <p className="mt-1 text-xs text-muted-foreground">{platform.description}</p>}
+          {showProductForm && (
+            <form onSubmit={submitProduct} className="mb-3 space-y-2 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-2.5">
+              <input required autoFocus value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="产品名称" className={`${inputClass} w-full text-xs`} />
+              <textarea rows={2} value={productDescription} onChange={(e) => setProductDescription(e.target.value)} placeholder="范围说明，可选" className={`${inputClass} w-full resize-none text-xs`} />
+              <div className="flex justify-end gap-2"><button type="button" onClick={() => setShowProductForm(false)} className="px-2 py-1 text-[11px] text-muted-foreground">取消</button><button disabled={isPending} className="rounded bg-cyan-600 px-2.5 py-1 text-[11px] font-semibold text-white">保存</button></div>
+            </form>
+          )}
+
+          <label className="relative mb-2 block"><Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" /><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="搜索产品" className={`${inputClass} w-full pl-8 text-xs`} /></label>
+
+          <div className="space-y-1">
+            {filteredProducts.length === 0 ? <p className="rounded-lg border border-dashed border-border p-6 text-center text-xs text-muted-foreground">暂无匹配产品</p> : filteredProducts.map((product) => {
+              const selected = product.id === selectedProduct?.id;
+              return <div key={product.id} className="space-y-1">
+                <div className={`group flex w-full items-center gap-1 rounded-lg px-2 py-2 transition ${selected ? "bg-cyan-500/10 text-cyan-200 ring-1 ring-cyan-500/25" : "text-slate-300 hover:bg-white/[0.04]"}`}>
+                  <button onClick={() => setSelectedProductId(product.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                    <Box className={`h-4 w-4 shrink-0 ${selected ? "text-cyan-400" : "text-slate-500"}`} />
+                    <span className="min-w-0 flex-1 truncate text-xs font-medium">{product.name}</span>
+                    <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px] text-muted-foreground">{product.versions.length}</span>
+                  </button>
+                  <button title="编辑产品" onClick={() => beginEdit(product)} className="rounded p-1 text-muted-foreground opacity-0 hover:bg-white/10 hover:text-cyan-300 group-hover:opacity-100 focus:opacity-100"><Pencil className="h-3 w-3" /></button>
+                  <button title="删除产品" onClick={() => removeProduct(product)} className="rounded p-1 text-muted-foreground opacity-0 hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100 focus:opacity-100"><Trash2 className="h-3 w-3" /></button>
                 </div>
-                <span className="text-[10px] text-muted-foreground">{platform.modules.length} 个模块</span>
-              </div>
+                {editingProductId === product.id && <form onSubmit={(event) => submitEdit(event, product.id)} className="space-y-2 rounded-lg border border-cyan-500/20 bg-cyan-500/[0.04] p-2.5">
+                  <input required autoFocus value={editName} onChange={(e) => setEditName(e.target.value)} className={`${inputClass} w-full text-xs`} />
+                  <textarea rows={2} value={editDescription} onChange={(e) => setEditDescription(e.target.value)} placeholder="范围说明，可选" className={`${inputClass} w-full resize-none text-xs`} />
+                  <div className="flex justify-end gap-1"><button type="button" title="取消" onClick={() => setEditingProductId(null)} className="rounded p-1.5 text-muted-foreground hover:bg-white/5"><X className="h-3.5 w-3.5" /></button><button disabled={isPending} title="保存" className="rounded bg-cyan-600 p-1.5 text-white"><Check className="h-3.5 w-3.5" /></button></div>
+                </form>}
+              </div>;
+            })}
+          </div>
+        </aside>
 
-              <div className="mt-4 space-y-3">
-                {platform.modules.length === 0 ? (
-                  <p className="rounded border border-border/40 bg-background/40 p-3 text-xs text-muted-foreground">
-                    暂无板块/模块。
-                  </p>
-                ) : (
-                  platform.modules.map((module) => (
-                    <div key={module.id} className="rounded-lg border border-border/40 bg-background/40 p-3">
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div>
-                          <h4 className="font-semibold text-white">{module.name}</h4>
-                          {module.description && <p className="mt-1 text-xs text-muted-foreground">{module.description}</p>}
-                        </div>
-                        <span className="text-[10px] text-muted-foreground">{module.versions.length} 个版本</span>
-                      </div>
-
-                      <div className="mt-3 space-y-2">
-                        {module.versions.length === 0 ? (
-                          <p className="text-xs text-muted-foreground">暂无版本。</p>
-                        ) : (
-                          module.versions.map((version) => (
-                            <div
-                              key={version.id}
-                              className="grid grid-cols-1 gap-3 rounded-lg border border-border/40 bg-black/10 p-3 md:grid-cols-[1fr_auto]"
-                            >
-                              <div className="min-w-0">
-                                <div className="flex flex-wrap items-center gap-2">
-                                  <span className="font-semibold text-white">{version.title}</span>
-                                  <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold text-muted-foreground">
-                                    {version.version}
-                                  </span>
-                                  <span className={`rounded border px-1.5 py-0.5 text-[10px] font-semibold ${statusClasses[version.status]}`}>
-                                    {statusLabels[version.status]}
-                                  </span>
-                                </div>
-                                {version.description && <p className="mt-1 text-xs text-muted-foreground">{version.description}</p>}
-                                <p className="mt-1 text-[10px] text-muted-foreground">
-                                  {formatDate(version.startDate) || "未设开始"} - {formatDate(version.releaseDate) || "未设发布"} · 已关联计划项 {version._count.planItems}
-                                </p>
-                              </div>
-                              <select
-                                value={version.status}
-                                onChange={(event) => changeStatus(version.id, event.target.value as ProductVersionStatus)}
-                                disabled={isPending}
-                                className="h-9 rounded-lg border border-border bg-input px-2 text-xs text-white outline-none focus:border-primary"
-                              >
-                                {Object.entries(statusLabels).map(([value, label]) => (
-                                  <option key={value} value={value}>
-                                    {label}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          ))
-                        )}
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
+        <main className="min-w-0 p-4 lg:p-5">
+          {!selectedProduct ? <div className="flex h-full min-h-[420px] items-center justify-center text-sm text-muted-foreground">请先新增产品</div> : <div className="space-y-4">
+            <div className="flex flex-col gap-2 border-b border-border/50 pb-3 sm:flex-row sm:items-start sm:justify-between">
+              <div><div className="flex items-center gap-2"><GitBranch className="h-4 w-4 text-cyan-400" /><h2 className="text-base font-semibold text-white">{selectedProduct.name}</h2></div><p className="mt-1 max-w-3xl text-xs text-muted-foreground">{selectedProduct.description || "暂无范围说明"}</p></div>
+              <span className="shrink-0 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2 py-1 text-[10px] font-semibold text-emerald-300">{selectedProduct.versions.length} 个版本</span>
             </div>
-          ))
-        )}
+
+            <form onSubmit={submitVersion} className="flex flex-col gap-2 rounded-lg border border-border/50 bg-white/[0.02] p-3 sm:flex-row">
+              <input required value={versionNo} onChange={(e) => setVersionNo(e.target.value)} placeholder="输入版本号，如 v1.2.0" className={`${inputClass} min-w-0 flex-1 text-xs`} />
+              <button disabled={isPending} className="inline-flex items-center justify-center gap-1 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-semibold text-white hover:bg-emerald-500 disabled:opacity-50">{isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PackagePlus className="h-3.5 w-3.5" />}新增版本</button>
+            </form>
+
+            <div className="overflow-hidden rounded-lg border border-border/50">
+              <div className="grid grid-cols-[minmax(220px,1fr)_auto] gap-3 bg-white/[0.03] px-3 py-2 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"><span>版本号</span><span className="pr-1 text-right">操作</span></div>
+              {selectedProduct.versions.length === 0 ? <div className="py-14 text-center text-xs text-muted-foreground">暂无版本，可在上方快速新增。</div> : selectedProduct.versions.map((item) => (
+                <div key={item.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 border-t border-border/40 px-3 py-3 transition hover:bg-white/[0.02]">
+                  {editingVersionId === item.id ? <form onSubmit={(event) => submitVersionEdit(event, item.id)} className="flex min-w-0 items-center gap-2"><input required autoFocus value={editVersionNo} onChange={(event) => setEditVersionNo(event.target.value)} className={`${inputClass} h-8 min-w-0 flex-1 text-xs`} /><button disabled={isPending} title="保存" className="rounded bg-cyan-600 p-1.5 text-white"><Check className="h-3.5 w-3.5" /></button><button type="button" title="取消" onClick={() => setEditingVersionId(null)} className="rounded p-1.5 text-muted-foreground hover:bg-white/5"><X className="h-3.5 w-3.5" /></button></form> : <span className="truncate text-xs font-semibold text-white">{item.version}</span>}
+                  {editingVersionId !== item.id && <div className="flex items-center justify-end gap-1"><button title="编辑版本" onClick={() => { setEditingVersionId(item.id); setEditVersionNo(item.version); setError(null); }} className="rounded p-1.5 text-muted-foreground hover:bg-white/10 hover:text-cyan-300"><Pencil className="h-3.5 w-3.5" /></button><button title="删除版本" onClick={() => removeVersion(item)} className="rounded p-1.5 text-muted-foreground hover:bg-red-500/10 hover:text-red-300"><Trash2 className="h-3.5 w-3.5" /></button></div>}
+                </div>
+              ))}
+            </div>
+          </div>}
+        </main>
       </div>
-    </section>
+    </div>
   );
 }

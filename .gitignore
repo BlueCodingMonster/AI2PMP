@@ -47,3 +47,11 @@ worktrees/
 
 # local data scratch files
 tech_center_roster.xlsx
+
+# tools / agent files
+.claude/
+.codegraph/
+.codex-tmp/
+.superpowers/
+.tmp/
+*.log

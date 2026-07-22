@@ -5,17 +5,15 @@ import { auth } from "@/lib/auth";
 import {
   productLineTeamSchema,
   memberSecondmentSchema,
-  productPlatformSchema,
-  productModuleSchema,
+  productSchema,
   productVersionSchema,
   productVersionStatusSchema,
   ProductLineTeamInput,
   MemberSecondmentInput,
-  ProductPlatformInput,
-  ProductModuleInput,
+  ProductInput,
   ProductVersionInput,
 } from "@/lib/validations/product-lines";
-import { ProductLineRole, SecondmentStatus, NotificationType } from "@prisma/client";
+import { ProductLineRole, SecondmentStatus } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 function isUniqueConstraintError(error: unknown) {
@@ -42,6 +40,10 @@ export async function getProductLineTeams() {
         },
         projects: {
           select: { id: true, name: true, key: true },
+        },
+        products: {
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
         },
         secondmentsTo: {
           where: { status: SecondmentStatus.ACTIVE },
@@ -74,6 +76,10 @@ export async function getProductLineTeamById(teamId: string) {
         },
         projects: {
           select: { id: true, name: true, key: true, status: true },
+        },
+        products: {
+          select: { id: true, name: true, description: true },
+          orderBy: { name: "asc" },
         },
         // 临时借入的成员 (toTeamId === teamId)
         secondmentsTo: {
@@ -299,21 +305,7 @@ export async function createSecondment(input: MemberSecondmentInput) {
       },
     });
 
-    // 登记成功后发送通知给被借调人
-    const targetTeam = await prisma.productLineTeam.findUnique({
-      where: { id: data.toTeamId },
-      select: { name: true },
-    });
-
-    await prisma.notification.create({
-      data: {
-        userId: data.userId,
-        type: NotificationType.SYSTEM,
-        title: "收到借调派遣通知",
-        content: `你已被管理员临时借调到小组 "${targetTeam?.name || "未知小组"}" 担任 "${data.role}" 角色，开始时间为: ${formatDate(data.startDate)}`,
-        linkUrl: `/product-lines/${data.toTeamId}`,
-      },
-    });
+    revalidatePath(`/product-lines/${data.toTeamId}`);
 
     revalidatePath(`/product-lines/${data.toTeamId}`);
     if (data.fromTeamId) {
@@ -352,15 +344,7 @@ export async function completeSecondment(secondmentId: string) {
       },
     });
 
-    // 通知被借调人
-    await prisma.notification.create({
-      data: {
-        userId: sec.userId,
-        type: NotificationType.SYSTEM,
-        title: "借调派遣已结束",
-        content: `你的临时借调派遣已结束，人员编制已调回原部门。`,
-      },
-    });
+
 
     revalidatePath(`/product-lines/${sec.toTeamId}`);
     if (sec.fromTeamId) {
@@ -428,6 +412,66 @@ export async function linkProjectToTeam(projectId: string, teamId: string | null
   }
 }
 
+/** 批量关联多个项目到当前小组。 */
+export async function linkProjectsToTeam(projectIds: string[], teamId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "未登录，无权操作" };
+  const ids = [...new Set(projectIds.filter(Boolean))];
+  if (ids.length === 0) return { success: false, error: "请至少选择一个项目" };
+
+  try {
+    await prisma.project.updateMany({ where: { id: { in: ids } }, data: { productLineTeamId: teamId } });
+    revalidatePath("/projects");
+    revalidatePath(`/product-lines/${teamId}`);
+    return { success: true };
+  } catch (error) {
+    console.error("[linkProjectsToTeam] 批量绑定项目到小组失败:", error);
+    return { success: false, error: "批量关联项目失败" };
+  }
+}
+
+/**
+ * 关联或解绑产品线小组与全局产品。
+ */
+export async function setProductTeamLink(teamId: string, productId: string, linked: boolean) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "未登录，无权操作" };
+
+  try {
+    await prisma.productLineTeam.update({
+      where: { id: teamId },
+      data: { products: linked ? { connect: { id: productId } } : { disconnect: { id: productId } } },
+    });
+    revalidatePath(`/product-lines/${teamId}`);
+    revalidatePath("/product-lines");
+    return { success: true };
+  } catch (error) {
+    console.error("[setProductTeamLink] 维护小组产品线关联失败:", error);
+    return { success: false, error: linked ? "关联产品线失败" : "取消产品线关联失败" };
+  }
+}
+
+/** 批量关联多个产品线到当前小组。 */
+export async function linkProductsToTeam(teamId: string, productIds: string[]) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "未登录，无权操作" };
+  const ids = [...new Set(productIds.filter(Boolean))];
+  if (ids.length === 0) return { success: false, error: "请至少选择一个产品线" };
+
+  try {
+    await prisma.productLineTeam.update({
+      where: { id: teamId },
+      data: { products: { connect: ids.map((id) => ({ id })) } },
+    });
+    revalidatePath(`/product-lines/${teamId}`);
+    revalidatePath("/product-lines");
+    return { success: true };
+  } catch (error) {
+    console.error("[linkProductsToTeam] 批量关联产品线失败:", error);
+    return { success: false, error: "批量关联产品线失败" };
+  }
+}
+
 // 格式化辅助
 function formatDate(date: string | Date) {
   const d = new Date(date);
@@ -435,111 +479,98 @@ function formatDate(date: string | Date) {
 }
 
 /**
- * 获取产品线下的产品/平台、板块/模块、版本树。
+ * 获取全局产品及其版本。
  */
-export async function getProductVersionTree(teamId: string) {
+export async function getProductTree() {
   try {
-    const platforms = await prisma.productPlatform.findMany({
-      where: { productLineTeamId: teamId },
+    const products = await prisma.product.findMany({
       orderBy: { createdAt: "asc" },
       include: {
-        modules: {
-          orderBy: { createdAt: "asc" },
-          include: {
-            versions: {
-              orderBy: [{ releaseDate: "asc" }, { createdAt: "asc" }],
-              include: {
-                _count: {
-                  select: { planItems: true },
-                },
-              },
-            },
-          },
+        versions: {
+          orderBy: [{ releaseDate: "asc" }, { createdAt: "asc" }],
         },
       },
     });
 
-    return { success: true, data: platforms };
+    return { success: true, data: products };
   } catch (error) {
-    console.error("[getProductVersionTree] 获取产品版本树失败:", error);
+    console.error("[getProductTree] 获取产品版本树失败:", error);
     return { success: false, error: "获取产品版本树失败", data: [] };
   }
 }
 
 /**
- * 新增产品/平台。
+ * 新增产品。
  */
-export async function createProductPlatform(input: ProductPlatformInput) {
+export async function createProduct(input: ProductInput) {
   const session = await auth();
   if (!session?.user?.id) {
     return { success: false, error: "未登录，无权操作" };
   }
 
-  const parsed = productPlatformSchema.safeParse(input);
+  const parsed = productSchema.safeParse(input);
   if (!parsed.success) {
     return { success: false, error: parsed.error.errors[0]?.message ?? "数据校验失败" };
   }
 
   try {
-    const platform = await prisma.productPlatform.create({
+    const product = await prisma.product.create({
       data: {
-        productLineTeamId: parsed.data.productLineTeamId,
         name: parsed.data.name,
         description: parsed.data.description ?? null,
       },
     });
 
-    revalidatePath(`/product-lines/${parsed.data.productLineTeamId}`);
-    return { success: true, data: platform };
+    revalidatePath("/product-catalog");
+    return { success: true, data: product };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      return { success: false, error: "该产品/平台已存在" };
+      return { success: false, error: "该产品已存在" };
     }
-    console.error("[createProductPlatform] 新增产品/平台失败:", error);
-    return { success: false, error: "新增产品/平台失败" };
+    console.error("[createProduct] 新增产品失败:", error);
+    return { success: false, error: "新增产品失败" };
   }
 }
 
 /**
- * 新增产品板块/模块。
+ * 编辑产品。
  */
-export async function createProductModule(input: ProductModuleInput) {
+export async function updateProduct(productId: string, input: ProductInput) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return { success: false, error: "未登录，无权操作" };
-  }
+  if (!session?.user?.id) return { success: false, error: "未登录，无权操作" };
 
-  const parsed = productModuleSchema.safeParse(input);
-  if (!parsed.success) {
-    return { success: false, error: parsed.error.errors[0]?.message ?? "数据校验失败" };
-  }
+  const parsed = productSchema.safeParse(input);
+  if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message ?? "数据校验失败" };
 
   try {
-    const platform = await prisma.productPlatform.findUnique({
-      where: { id: parsed.data.productPlatformId },
-      select: { productLineTeamId: true },
+    const product = await prisma.product.update({
+      where: { id: productId },
+      data: { name: parsed.data.name, description: parsed.data.description ?? null },
     });
-
-    if (!platform) {
-      return { success: false, error: "产品/平台不存在" };
-    }
-
-    const productModule = await prisma.productModule.create({
-      data: {
-        productPlatformId: parsed.data.productPlatformId,
-        name: parsed.data.name,
-        description: parsed.data.description ?? null,
-      },
-    });
-
-    revalidatePath(`/product-lines/${platform.productLineTeamId}`);
-    return { success: true, data: productModule };
+    revalidatePath("/product-catalog");
+    return { success: true, data: product };
   } catch (error) {
-    if (isUniqueConstraintError(error)) {
-      return { success: false, error: "该板块/模块已存在" };
-    }
-    console.error("[createProductModule] 新增板块/模块失败:", error);
-    return { success: false, error: "新增板块/模块失败" };
+    if (isUniqueConstraintError(error)) return { success: false, error: "该产品已存在" };
+    console.error("[updateProduct] 编辑产品/项目失败:", error);
+    return { success: false, error: "编辑产品/项目失败" };
+  }
+}
+
+/**
+ * 删除产品及其版本。
+ */
+export async function deleteProduct(productId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "未登录，无权操作" };
+
+  try {
+    await prisma.product.delete({ where: { id: productId } });
+    revalidatePath("/product-catalog");
+    revalidatePath("/plans");
+    return { success: true };
+  } catch (error) {
+    console.error("[deleteProduct] 删除产品/项目失败:", error);
+    return { success: false, error: "删除产品/项目失败" };
   }
 }
 
@@ -558,41 +589,75 @@ export async function createProductVersion(input: ProductVersionInput) {
   }
 
   try {
-    const productModule = await prisma.productModule.findUnique({
-      where: { id: parsed.data.productModuleId },
-      include: {
-        productPlatform: {
-          select: { productLineTeamId: true },
-        },
-      },
+    const product = await prisma.product.findUnique({
+      where: { id: parsed.data.productId },
+      select: { id: true },
     });
 
-    if (!productModule || productModule.productPlatform.productLineTeamId !== parsed.data.productLineTeamId) {
-      return { success: false, error: "板块/模块不属于当前产品线" };
+    if (!product) {
+      return { success: false, error: "产品不存在" };
     }
 
     const version = await prisma.productVersion.create({
       data: {
-        productLineTeamId: parsed.data.productLineTeamId,
-        productModuleId: parsed.data.productModuleId,
-        title: parsed.data.title,
+        productId: parsed.data.productId,
+        title: parsed.data.version,
         version: parsed.data.version,
-        description: parsed.data.description ?? null,
-        status: parsed.data.status,
-        startDate: parsed.data.startDate ? new Date(parsed.data.startDate) : null,
-        releaseDate: parsed.data.releaseDate ? new Date(parsed.data.releaseDate) : null,
       },
     });
 
-    revalidatePath(`/product-lines/${parsed.data.productLineTeamId}`);
+    revalidatePath("/product-catalog");
     revalidatePath("/plans");
     return { success: true, data: version };
   } catch (error) {
     if (isUniqueConstraintError(error)) {
-      return { success: false, error: "该模块下版本号已存在" };
+      return { success: false, error: "该产品下版本号已存在" };
     }
     console.error("[createProductVersion] 新增产品版本失败:", error);
     return { success: false, error: "新增产品版本失败" };
+  }
+}
+
+/**
+ * 编辑版本号。
+ */
+export async function updateProductVersion(versionId: string, input: { version: unknown }) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "未登录，无权操作" };
+
+  const parsed = productVersionSchema.pick({ version: true }).safeParse(input);
+  if (!parsed.success) return { success: false, error: parsed.error.errors[0]?.message ?? "数据校验失败" };
+
+  try {
+    const version = await prisma.productVersion.update({
+      where: { id: versionId },
+      data: { version: parsed.data.version, title: parsed.data.version },
+    });
+    revalidatePath("/product-catalog");
+    revalidatePath("/plans");
+    return { success: true, data: version };
+  } catch (error) {
+    if (isUniqueConstraintError(error)) return { success: false, error: "该产品下版本号已存在" };
+    console.error("[updateProductVersion] 编辑版本失败:", error);
+    return { success: false, error: "编辑版本失败" };
+  }
+}
+
+/**
+ * 删除版本。
+ */
+export async function deleteProductVersion(versionId: string) {
+  const session = await auth();
+  if (!session?.user?.id) return { success: false, error: "未登录，无权操作" };
+
+  try {
+    await prisma.productVersion.delete({ where: { id: versionId } });
+    revalidatePath("/product-catalog");
+    revalidatePath("/plans");
+    return { success: true };
+  } catch (error) {
+    console.error("[deleteProductVersion] 删除版本失败:", error);
+    return { success: false, error: "删除版本失败" };
   }
 }
 
@@ -614,10 +679,10 @@ export async function updateProductVersionStatus(versionId: string, input: { sta
     const version = await prisma.productVersion.update({
       where: { id: versionId },
       data: { status: parsed.data.status },
-      select: { id: true, productLineTeamId: true },
+      select: { id: true },
     });
 
-    revalidatePath(`/product-lines/${version.productLineTeamId}`);
+    revalidatePath("/product-catalog");
     revalidatePath("/plans");
     return { success: true, data: version };
   } catch (error) {

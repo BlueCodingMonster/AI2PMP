@@ -3,7 +3,9 @@
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/lib/auth";
 import { memberCreateSchema, memberUpdateSchema, MemberCreateInput, MemberUpdateInput } from "@/lib/validations/team";
+import { recordAuditLog } from "@/actions/audit-logs";
 import bcrypt from "bcryptjs";
+import type { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 
 /**
@@ -20,14 +22,13 @@ export async function getMembers() {
         email: true,
         phone: true,
         department: true,
+        level: true,
+        position: true,
         isAdmin: true,
         isActive: true,
         createdAt: true,
         _count: {
           select: {
-            assignedRequirements: true,
-            assignedTasks: true,
-            assignedBugs: true,
             projectMemberships: true,
           },
         },
@@ -77,11 +78,14 @@ export async function createMember(input: MemberCreateInput) {
         password: hashedPassword,
         phone: data.phone ?? null,
         department: data.department ?? null,
+        level: data.level ?? null,
+        position: data.position ?? null,
         isAdmin: data.isAdmin ?? false,
         isActive: data.isActive ?? true,
       },
     });
 
+    await recordAuditLog("CREATE", "USER", `创建了新用户：${user.name} (${user.username})`);
     revalidatePath("/team");
     return { success: true, data: { id: user.id, name: user.name, username: user.username } };
   } catch (error) {
@@ -91,7 +95,7 @@ export async function createMember(input: MemberCreateInput) {
 }
 
 /**
- * 更新团队成员信息
+ * 更新成员资料
  */
 export async function updateMember(id: string, input: MemberUpdateInput) {
   const session = await auth();
@@ -123,11 +127,13 @@ export async function updateMember(id: string, input: MemberUpdateInput) {
     }
 
     // 组装数据：非管理员不能自行升级为管理员或启用/禁用自己
-    const updateData: any = {
+    const updateData: Prisma.UserUpdateInput = {
       name: data.name,
       username: data.username,
       phone: data.phone ?? null,
       department: data.department ?? null,
+      level: data.level ?? null,
+      position: data.position ?? null,
     };
 
     if (isAdmin) {
@@ -140,6 +146,7 @@ export async function updateMember(id: string, input: MemberUpdateInput) {
       data: updateData,
     });
 
+    await recordAuditLog("UPDATE", "USER", `更新了用户资料：${updated.name} (${updated.username})`);
     revalidatePath("/team");
     return { success: true, data: updated };
   } catch (error) {
@@ -162,23 +169,56 @@ export async function deleteMember(id: string) {
   }
 
   try {
+    const user = await prisma.user.findUnique({ where: { id }, select: { name: true, username: true } });
     await prisma.user.delete({
       where: { id },
     });
+    if (user) {
+      await recordAuditLog("DELETE", "USER", `删除了用户：${user.name} (${user.username})`);
+    }
     revalidatePath("/team");
     return { success: true };
   } catch (error) {
     console.error("[deleteMember] 彻底删除成员失败:", error);
     // 降级策略：禁用用户
     try {
-      await prisma.user.update({
+      const user = await prisma.user.update({
         where: { id },
         data: { isActive: false },
       });
+      await recordAuditLog("DISABLE", "USER", `禁用了用户（自动降级）：${user.name} (${user.username})`);
       revalidatePath("/team");
       return { success: true, warning: "因该用户已产生业务关联数据，已自动将其变更为「禁用」状态" };
-    } catch (err) {
+    } catch {
       return { success: false, error: "删除及禁用成员均失败，系统异常" };
     }
+  }
+}
+
+/**
+ * 重置团队成员密码
+ */
+export async function resetPassword(id: string, newPassword?: string) {
+  const session = await auth();
+  const isAdmin = session?.user?.isAdmin;
+  
+  if (!isAdmin) {
+    return { success: false, error: "权限不足，只有系统管理员可以重置成员密码" };
+  }
+
+  const passwordToUse = newPassword || "123456";
+
+  try {
+    const hashedPassword = await bcrypt.hash(passwordToUse, 10);
+    const user = await prisma.user.update({
+      where: { id },
+      data: { password: hashedPassword },
+      select: { name: true, username: true }
+    });
+    await recordAuditLog("RESET_PASSWORD", "USER", `重置了用户密码：${user.name} (${user.username})`);
+    return { success: true, password: passwordToUse };
+  } catch (error) {
+    console.error("[resetPassword] 重置成员密码失败:", error);
+    return { success: false, error: "重置成员密码失败" };
   }
 }

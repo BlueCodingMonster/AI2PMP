@@ -8,14 +8,11 @@
 /** 项目成员角色 */
 export type ProjectRole = "OWNER" | "ADMIN" | "MEMBER" | "VIEWER";
 
-/** 任务优先级 */
+/** 优先级 */
 export type Priority = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
-/** 任务状态 */
-export type TaskStatus = "TODO" | "IN_PROGRESS" | "IN_REVIEW" | "DONE" | "CANCELLED";
-
 /** 项目状态 */
-export type ProjectStatus = "PLANNING" | "ACTIVE" | "ON_HOLD" | "COMPLETED" | "ARCHIVED";
+export type ProjectStatus = "CONTRACT_SIGNED" | "IMPLEMENTING" | "ACCEPTANCE" | "ARCHIVED";
 
 // ===== 通用响应类型 =====
 

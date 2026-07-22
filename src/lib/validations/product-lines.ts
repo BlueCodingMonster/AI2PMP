@@ -24,33 +24,19 @@ export type ProductLineTeamInput = z.infer<typeof productLineTeamSchema>;
 export type ProductLineMemberInput = z.infer<typeof productLineMemberSchema>;
 export type MemberSecondmentInput = z.infer<typeof memberSecondmentSchema>;
 
-export const productPlatformSchema = z.object({
-  productLineTeamId: z.string().min(1, "请选择产品线小组"),
-  name: z.string().min(1, "请输入产品/平台名称").max(80, "产品/平台名称最多80个字符").trim(),
-  description: z.string().optional().nullable(),
-});
-
-export const productModuleSchema = z.object({
-  productPlatformId: z.string().min(1, "请选择产品/平台"),
-  name: z.string().min(1, "请输入板块/模块名称").max(80, "板块/模块名称最多80个字符").trim(),
+export const productSchema = z.object({
+  name: z.string().min(1, "请输入产品/项目名称").max(80, "产品/项目名称最多80个字符").trim(),
   description: z.string().optional().nullable(),
 });
 
 export const productVersionSchema = z.object({
-  productLineTeamId: z.string().min(1, "请选择产品线小组"),
-  productModuleId: z.string().min(1, "请选择板块/模块"),
-  title: z.string().min(1, "请输入版本标题").max(120, "版本标题最多120个字符").trim(),
+  productId: z.string().min(1, "请选择产品/项目"),
   version: z.string().min(1, "请输入版本号").max(40, "版本号最多40个字符").trim(),
-  description: z.string().optional().nullable(),
-  status: z.nativeEnum(ProductVersionStatus).default(ProductVersionStatus.PLANNING),
-  startDate: z.string().optional().nullable(),
-  releaseDate: z.string().optional().nullable(),
 });
 
 export const productVersionStatusSchema = z.object({
   status: z.nativeEnum(ProductVersionStatus),
 });
 
-export type ProductPlatformInput = z.infer<typeof productPlatformSchema>;
-export type ProductModuleInput = z.infer<typeof productModuleSchema>;
+export type ProductInput = z.infer<typeof productSchema>;
 export type ProductVersionInput = z.infer<typeof productVersionSchema>;

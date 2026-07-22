@@ -1,0 +1,317 @@
+[
+  {
+    "name": "刘杰",
+    "username": "liujie",
+    "department": "仪表平台研发部",
+    "level": "部门经理",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "王高山",
+    "username": "wanggaoshan",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "前端研发工程师"
+  },
+  {
+    "name": "周大鹏",
+    "username": "zhoudapeng",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "前端研发工程师"
+  },
+  {
+    "name": "刘中志",
+    "username": "liuzhongzhi",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "王云飞",
+    "username": "wangyunfei",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "高朋",
+    "username": "gaopeng",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "前端研发工程师"
+  },
+  {
+    "name": "张涛（前端）",
+    "username": "zhangtao_frontend",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "前端研发工程师"
+  },
+  {
+    "name": "朱清凡",
+    "username": "zhuqingfan",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "韩冰",
+    "username": "hanbing",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "前端研发工程师"
+  },
+  {
+    "name": "王亚",
+    "username": "wangya",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "马永辉",
+    "username": "mayonghui",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "张涛（后端）",
+    "username": "zhangtao_backend",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "安鸿效",
+    "username": "anhongxiao",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "大数据"
+  },
+  {
+    "name": "蔡浩然",
+    "username": "caihaoran",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "宋庆松",
+    "username": "songqingsong",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "张厚诚",
+    "username": "zhanghoucheng",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "前端研发工程师"
+  },
+  {
+    "name": "沈利",
+    "username": "shenli",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "前端研发工程师"
+  },
+  {
+    "name": "石丰源",
+    "username": "shifengyuan",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "王海川",
+    "username": "wanghaichuan",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "吴伟",
+    "username": "wuwei",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "崔恩泉",
+    "username": "cuienquan",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "刘广鑫",
+    "username": "liuguangxin",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "陈鹏飞",
+    "username": "chenpengfei",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "张国栋",
+    "username": "zhangguodong",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "马树成",
+    "username": "mashucheng",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "大数据"
+  },
+  {
+    "name": "翟玉星",
+    "username": "zhaiyuxing",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "后端研发工程师"
+  },
+  {
+    "name": "公佩宇",
+    "username": "gongpeiyu",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "自动化开发"
+  },
+  {
+    "name": "刘金鑫",
+    "username": "liujinxin",
+    "department": "仪表平台研发部",
+    "level": "员工",
+    "position": "自动化开发"
+  },
+  {
+    "name": "李克秋",
+    "username": "likeqiu",
+    "department": "产品规划部",
+    "level": "部门经理",
+    "position": "产品经理"
+  },
+  {
+    "name": "梁冬雪",
+    "username": "liangdongxue",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "产品经理"
+  },
+  {
+    "name": "亓新明",
+    "username": "qixinming",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "产品经理"
+  },
+  {
+    "name": "李婷婷",
+    "username": "litingting",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "产品经理"
+  },
+  {
+    "name": "张传梅",
+    "username": "zhangchuanmei",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "产品经理"
+  },
+  {
+    "name": "张路路",
+    "username": "zhanglulu",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "产品经理"
+  },
+  {
+    "name": "黄其萌",
+    "username": "huangqimeng",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "产品经理"
+  },
+  {
+    "name": "于妍卉",
+    "username": "yuyanhui",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "产品经理"
+  },
+  {
+    "name": "李海川",
+    "username": "lihaichuan",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "UI设计"
+  },
+  {
+    "name": "王常华",
+    "username": "wangchanghua",
+    "department": "产品规划部",
+    "level": "员工",
+    "position": "UI设计"
+  },
+  {
+    "name": "巩蕊",
+    "username": "gongrui",
+    "department": "产品部",
+    "level": "员工",
+    "position": "产品经理"
+  },
+  {
+    "name": "刘习",
+    "username": "liuxi",
+    "department": "测试部",
+    "level": "部门经理",
+    "position": "测试工程师"
+  },
+  {
+    "name": "任昊宇",
+    "username": "renhaoyu",
+    "department": "测试部",
+    "level": "员工",
+    "position": "测试工程师"
+  },
+  {
+    "name": "高先泽",
+    "username": "gaoxianze",
+    "department": "测试部",
+    "level": "员工",
+    "position": "测试工程师"
+  },
+  {
+    "name": "李燕",
+    "username": "liyan",
+    "department": "测试部",
+    "level": "员工",
+    "position": "测试工程师"
+  },
+  {
+    "name": "邢子璠",
+    "username": "xingzifan",
+    "department": "测试部",
+    "level": "员工",
+    "position": "测试工程师"
+  },
+  {
+    "name": "杨含笑",
+    "username": "yanghanxiao",
+    "department": "测试部",
+    "level": "员工",
+    "position": "测试工程师"
+  }
+]

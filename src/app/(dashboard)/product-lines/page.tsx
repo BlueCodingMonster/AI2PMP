@@ -5,14 +5,17 @@ import ProductLinesClient from "@/components/product-lines/product-lines-client"
 import { Layers } from "lucide-react";
 
 export const metadata = {
-  title: "AI2PmP - 产品线小组",
-  description: "内部研发项目管理系统 - 研发组织架构与产品线架构",
+  title: "SDLC · 产品线小组",
+  description: "SDLC · 研发效能平台 - 研发组织架构与产品线架构",
 };
 
 export default async function ProductLinesPage() {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
+  }
+  if (!session.user.isAdmin) {
+    redirect("/");
   }
 
   const result = await getProductLineTeams();
