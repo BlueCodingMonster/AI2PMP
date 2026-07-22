@@ -24,7 +24,8 @@
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "npx tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "package": "node scripts/package.mjs"
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2",
