@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   CalendarDays,
   ChevronDown,
@@ -145,7 +145,7 @@ const initialCalendar = {
   days: [] as Array<{ date: string; type: string; standardHours: number | ""; label: string; notes: string }>,
 };
 
-const controlClass = "min-h-10 rounded-lg border border-border bg-input px-3 py-2 text-sm text-white outline-none focus:border-indigo-500";
+const controlClass = "min-h-10 rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground outline-none focus:border-indigo-500";
 
 function shortDate(value: string | null) {
   return value ? value.slice(0, 10) : "-";
@@ -177,13 +177,47 @@ function buildWbsRows(tasks: TaskItem[], collapsedIds: Set<string>) {
   const byParent = new Map<string, TaskItem[]>();
   tasks.forEach((task) => byParent.set(task.parentId || "root", [...(byParent.get(task.parentId || "root") || []), task]));
   const rows: TimelineRow[] = [];
-  const walk = (parentId: string) =>
-    (byParent.get(parentId) || []).forEach((task) => {
+  const walk = (parentId: string) => {
+    const children = byParent.get(parentId) || [];
+    children.sort((a, b) => {
+      // 1. 按小组名称 (zh-CN) 排序
+      const teamA = a.productLineTeam?.name || "";
+      const teamB = b.productLineTeam?.name || "";
+      const teamCmp = teamA.localeCompare(teamB, "zh-CN");
+      if (teamCmp !== 0) return teamCmp;
+
+      // 2. 按任务计划开始日期排序（有开始日期的排在前面）
+      const hasStartA = !!a.planStartDate;
+      const hasStartB = !!b.planStartDate;
+      if (hasStartA && !hasStartB) return -1;
+      if (!hasStartA && hasStartB) return 1;
+      if (hasStartA && hasStartB) {
+        const timeStartA = new Date(a.planStartDate!).getTime();
+        const timeStartB = new Date(b.planStartDate!).getTime();
+        if (timeStartA !== timeStartB) return timeStartA - timeStartB;
+      }
+
+      // 3. 按任务计划结束日期排序
+      const hasEndA = !!a.planEndDate;
+      const hasEndB = !!b.planEndDate;
+      if (hasEndA && !hasEndB) return -1;
+      if (!hasEndA && hasEndB) return 1;
+      if (hasEndA && hasEndB) {
+        const timeEndA = new Date(a.planEndDate!).getTime();
+        const timeEndB = new Date(b.planEndDate!).getTime();
+        if (timeEndA !== timeEndB) return timeEndA - timeEndB;
+      }
+
+      // 4. 次要排序：sequenceNo
+      return a.sequenceNo - b.sequenceNo;
+    });
+
+    children.forEach((task) => {
       rows.push({
         id: task.id,
         kind: "task",
         label: task.title,
-        subtitle: `计划：${task.plannedWorkdays}天 ｜ 实际：${task.actualStartAt ? `${task.actualWorkdays ?? 0}天` : "未开始"} ｜ 执行人：${task.executor?.name || "未分配"}`,
+        subtitle: `小组：${task.productLineTeam?.name || "未指定"} ｜ 计划：${task.plannedWorkdays}天 ｜ 实际：${task.actualStartAt ? `${task.actualWorkdays ?? 0}天` : "未开始"} ｜ 执行人：${task.executor?.name || "未分配"}`,
         task,
         depth: task.level - 1,
       });
@@ -191,6 +225,7 @@ function buildWbsRows(tasks: TaskItem[], collapsedIds: Set<string>) {
         walk(task.id);
       }
     });
+  };
   walk("root");
   return rows;
 }
@@ -226,7 +261,7 @@ function checkOverallocation(items: TaskItem[], days: Date[]): boolean {
   return false;
 }
 
-function buildGroupedRows(tasks: TaskItem[], mode: Exclude<ViewMode, "wbs">, positionMap: Map<string, string>, collapsedIds: Set<string>, context: Context, days: Date[]) {
+function buildGroupedRows(tasks: TaskItem[], mode: Exclude<ViewMode, "wbs">, positionMap: Map<string, string>, collapsedIds: Set<string>, context: Context, days: Date[], selectedTeamIds: string[] = []) {
   const leaves = tasks.filter((task) => task.children.length === 0);
 
   // 按执行人分组任务
@@ -241,6 +276,16 @@ function buildGroupedRows(tasks: TaskItem[], mode: Exclude<ViewMode, "wbs">, pos
       unassigned.push(task);
     }
   });
+
+  // 当提供了产品小组筛选条件时，收集选中小组的所有成员 ID
+  const selectedTeamUserIds = new Set<string>();
+  if (selectedTeamIds.length > 0) {
+    context.teams.forEach((team) => {
+      if (selectedTeamIds.includes(team.id)) {
+        team.members.forEach((m) => selectedTeamUserIds.add(m.userId));
+      }
+    });
+  }
 
   // 构建 userId -> teamName 映射，用于按小组排序
   const userTeamMap = new Map<string, string>();
@@ -261,9 +306,15 @@ function buildGroupedRows(tasks: TaskItem[], mode: Exclude<ViewMode, "wbs">, pos
   // 岗位排序权重：组长 > 产品经理 > 前端 > 后端 > 测试
   const roleOrder: Record<string, number> = { LEADER: 0, PM: 1, FRONTEND: 2, BACKEND: 3, TESTER: 4 };
 
-  // 获取所有活跃用户（排除部门经理），按小组名排序，同组内按岗位排序
+  // 获取人员范围：若选择了小组，仅保留属于选中小组的成员及有相关任务的执行人；未选择小组则保留全员
   const allUsers = context.users
-    .filter((u) => u.level !== "部门经理")
+    .filter((u) => {
+      if (u.level === "部门经理") return false;
+      if (selectedTeamIds.length > 0) {
+        return selectedTeamUserIds.has(u.id) || tasksByExecutor.has(u.id);
+      }
+      return true;
+    })
     .sort((a, b) => {
       const teamA = userTeamMap.get(a.id) || "zzz_无小组";
       const teamB = userTeamMap.get(b.id) || "zzz_无小组";
@@ -480,7 +531,7 @@ function TimelineBoard({
                   ) : (
                     <UserRound className="h-4 w-4 text-indigo-400 shrink-0" />
                   )}
-                  <span className={row.isOverallocated ? "text-red-500 font-bold" : "text-white"}>{row.label}</span>
+                  <span className={row.isOverallocated ? "text-red-500 font-bold" : "text-foreground font-semibold"}>{row.label}</span>
 
                   {row.subtitle && <span className="text-xs font-normal text-muted-foreground">({row.subtitle})</span>}
                 </div>
@@ -508,14 +559,14 @@ function TimelineBoard({
                   </div>
                   {groupBar && (
                     <div 
-                      className="absolute top-2 h-6 rounded border px-2 py-0.5 shadow-sm bg-indigo-500/10 border-indigo-500/30 text-indigo-300"
+                      className="absolute top-2 h-6 rounded border px-2 py-0.5 shadow-sm bg-indigo-600/85 dark:bg-indigo-500/35 border-indigo-700/90 text-white font-bold"
                       style={{ left: `calc(${groupBar.left}% + 2px)`, width: `calc(${groupBar.width}% - 4px)` }}
                     >
-                      <div className="truncate text-[10px] font-bold flex items-center justify-between">
+                      <div className="truncate text-[10px] font-bold flex items-center justify-between text-white">
                         <span>排期汇总：{row.progressPercent}%</span>
                       </div>
-                      <div className="h-0.5 rounded-full bg-black/20 mt-0.5">
-                        <div className="h-0.5 rounded-full bg-indigo-400" style={{ width: `${row.progressPercent}%` }} />
+                      <div className="h-0.5 rounded-full bg-white/30 mt-0.5">
+                        <div className="h-0.5 rounded-full bg-emerald-400" style={{ width: `${row.progressPercent}%` }} />
                       </div>
                     </div>
                   )}
@@ -526,7 +577,11 @@ function TimelineBoard({
           const task = row.task!;
           const bar = barGeometry(task, days);
           const isParent = task.children.length > 0;
-          const barColor = mode === "person" ? "bg-blue-500/15 border-blue-500/30 text-blue-200" : isParent ? "bg-indigo-500/15 border-indigo-500/30 text-indigo-200" : "bg-emerald-500/15 border-emerald-500/30 text-emerald-200";
+          const barColor = mode === "person" 
+            ? "bg-sky-600/85 dark:bg-blue-500/35 border-sky-700/90 dark:border-blue-500/50 text-white font-bold shadow-md" 
+            : isParent 
+            ? "bg-indigo-600/85 dark:bg-indigo-500/35 border-indigo-700/90 dark:border-indigo-500/50 text-white font-bold shadow-md" 
+            : "bg-emerald-600/85 dark:bg-emerald-500/35 border-emerald-700/90 dark:border-emerald-500/50 text-white font-bold shadow-md";
           return (
             <div key={`${row.id}-${mode}`} className="group grid min-h-[62px] border-b border-border relative hover:z-30" style={{ gridTemplateColumns: `${leftWidth}px 1fr` }}>
               <div className="flex items-start gap-2 border-r border-border px-4 py-3" style={{ paddingLeft: 16 + (mode === "wbs" ? (row.depth || 0) * 18 : 0) }}>
@@ -549,11 +604,11 @@ function TimelineBoard({
                 <Layers3 className={`mt-1 h-4 w-4 shrink-0 ${isParent ? "text-indigo-400" : "text-emerald-400"}`} />
                 <div className="min-w-0 flex-1">
                   {mode === "person" && task.level > 1 && taskIdToL1Title?.get(task.id) && (
-                    <div className="text-[10px] font-medium text-indigo-400/90 mb-0.5">
+                    <div className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 mb-0.5">
                       一级任务：{taskIdToL1Title.get(task.id)}
                     </div>
                   )}
-                  <div className="truncate text-sm font-semibold text-white">{task.title}</div>
+                  <div className="truncate text-sm font-semibold text-foreground">{task.title}</div>
                   <div className="mt-1 text-xs text-muted-foreground">{row.subtitle}</div>
                   {(task.monthlyItemType || task.versionType) && (
                     <div className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
@@ -605,7 +660,7 @@ function TimelineBoard({
                     }}
                     onMouseLeave={() => setHoveredBar(null)}
                   >
-                    <div className="truncate text-[11px] font-semibold">{task.progressPercent}% - {task.title}</div>
+                    <div className="truncate text-[11px] font-bold text-white">{task.progressPercent}% - {task.title}</div>
                     <div className="mt-1 h-1 rounded-full bg-black/20">
                       <div className="h-1 rounded-full bg-current" style={{ width: `${task.progressPercent}%` }} />
                     </div>
@@ -657,44 +712,44 @@ function TimelineBoard({
         
         return (
           <div 
-            className="pointer-events-none fixed z-50 w-72 rounded-lg border border-slate-800 bg-[#0f172a]/95 p-3.5 shadow-2xl backdrop-blur-md text-white text-left"
+            className="pointer-events-none fixed z-50 w-72 rounded-lg border border-border bg-card/95 p-3.5 shadow-2xl backdrop-blur-md text-foreground text-left"
             style={{
               left,
               top,
             }}
           >
-            <div className="text-xs font-bold text-white border-b border-slate-800 pb-2 mb-2 break-words whitespace-normal leading-relaxed text-left">
+            <div className="text-xs font-bold text-foreground border-b border-border pb-2 mb-2 break-words whitespace-normal leading-relaxed text-left">
               {task.title}
             </div>
             <div className="space-y-1.5 text-[11px] text-left">
               <div className="flex justify-between items-center">
-                <span className="text-slate-400">负责人</span>
-                <span className="font-medium text-slate-200">{task.executor?.name || "未分配"}</span>
+                <span className="text-muted-foreground">负责人</span>
+                <span className="font-medium text-foreground">{task.executor?.name || "未分配"}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400">计划起止</span>
-                <span className="font-medium text-slate-200">{shortDate(task.planStartDate)} 至 {shortDate(task.planEndDate)}</span>
+                <span className="text-muted-foreground">计划起止</span>
+                <span className="font-medium text-foreground">{shortDate(task.planStartDate)} 至 {shortDate(task.planEndDate)}</span>
               </div>
               {task.actualStartAt && (
                 <div className="flex justify-between items-center">
-                  <span className="text-slate-400">实际起止</span>
-                  <span className="font-medium text-slate-200">
+                  <span className="text-muted-foreground">实际起止</span>
+                  <span className="font-medium text-foreground">
                     {shortDate(task.actualStartAt)} 至 {task.actualFinishAt ? shortDate(task.actualFinishAt) : "进行中"}
                   </span>
                 </div>
               )}
               <div className="flex justify-between items-center">
-                <span className="text-slate-400">当前进度</span>
-                <span className="font-semibold text-indigo-400">{task.progressPercent}%</span>
+                <span className="text-muted-foreground">当前进度</span>
+                <span className="font-semibold text-indigo-500 dark:text-indigo-400">{task.progressPercent}%</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-slate-400">当前状态</span>
+                <span className="text-muted-foreground">当前状态</span>
                 <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold border ${
-                  task.status === "DONE" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-400" :
-                  task.status === "IN_PROGRESS" ? "bg-blue-500/10 border-blue-500/30 text-blue-400" :
-                  task.status === "PAUSED" ? "bg-amber-500/10 border-amber-500/30 text-amber-400" :
-                  task.status === "CANCELLED" ? "bg-red-500/10 border-red-500/30 text-red-400" :
-                  "bg-slate-500/10 border-slate-500/30 text-slate-400"
+                  task.status === "DONE" ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400" :
+                  task.status === "IN_PROGRESS" ? "bg-blue-500/10 border-blue-500/30 text-blue-600 dark:text-blue-400" :
+                  task.status === "PAUSED" ? "bg-amber-500/10 border-amber-500/30 text-amber-600 dark:text-amber-400" :
+                  task.status === "CANCELLED" ? "bg-red-500/10 border-red-500/30 text-red-600 dark:text-red-400" :
+                  "bg-muted border-border text-muted-foreground"
                 }`}>
                   {statusLabels[task.status] || task.status}
                 </span>
@@ -703,7 +758,7 @@ function TimelineBoard({
             
             {/* 气泡小箭头 */}
             <div 
-              className="absolute h-2 w-2 rotate-45 border-slate-800 bg-[#0f172a]/95"
+              className="absolute h-2 w-2 rotate-45 border-border bg-card"
               style={{
                 left: arrowLeft,
                 ...(popDown 
@@ -719,7 +774,7 @@ function TimelineBoard({
   );
 }
 
-export default function ManagedTaskManager({ tasks, calendars, context }: { tasks: TaskItem[]; calendars: CalendarItem[]; context: Context }) {
+export default function ManagedTaskManager({ tasks, calendars, context, isDeptManager = true }: { tasks: TaskItem[]; calendars: CalendarItem[]; context: Context; isDeptManager?: boolean }) {
   const [view, setView] = useState<ViewMode>("wbs");
   const [query, setQuery] = useState("");
   const [filterYM, setFilterYM] = useState<string>(() => {
@@ -737,7 +792,29 @@ export default function ManagedTaskManager({ tasks, calendars, context }: { task
       }
     }
   }, []);
-  const [teamFilter, setTeamFilter] = useState("");
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
+  const teamDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (teamDropdownRef.current && !teamDropdownRef.current.contains(event.target as Node)) {
+        setIsTeamDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const selectedTeamsLabel = () => {
+    if (selectedTeamIds.length === 0) return "选择团队";
+    if (selectedTeamIds.length === 1) {
+      const team = context.teams.find((t) => t.id === selectedTeamIds[0]);
+      return team ? team.name : "选择团队";
+    }
+    return `已选 ${selectedTeamIds.length} 个团队`;
+  };
+
   const [executorFilter, setExecutorFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
 
@@ -788,7 +865,9 @@ export default function ManagedTaskManager({ tasks, calendars, context }: { task
         }
       }
 
-      if (matchesDate && (!query || text.includes(query.toLowerCase())) && (!teamFilter || task.productLineTeam.id === teamFilter) && (!executorFilter || task.executorId === executorFilter) && (!statusFilter || task.status === statusFilter)) {
+      const matchesTeam = selectedTeamIds.length === 0 || selectedTeamIds.includes(task.productLineTeam.id);
+
+      if (matchesDate && matchesTeam && (!query || text.includes(query.toLowerCase())) && (!executorFilter || task.executorId === executorFilter) && (!statusFilter || task.status === statusFilter)) {
         directMatchIds.add(task.id);
       }
     });
@@ -813,7 +892,7 @@ export default function ManagedTaskManager({ tasks, calendars, context }: { task
       }
     });
 
-    // 向下：把每个匹配任务的所有后代加进来
+    // 向下：把每个匹配任务的所有后代加进来（包括被向上补全的祖先任务的后代，确保展开父节点时能看到完整子树和未排期节点）
     const addDescendants = (parentId: string) => {
       tasks.forEach((t) => {
         if (t.parentId === parentId && !includedIds.has(t.id)) {
@@ -822,10 +901,10 @@ export default function ManagedTaskManager({ tasks, calendars, context }: { task
         }
       });
     };
-    directMatchIds.forEach((id) => addDescendants(id));
+    Array.from(includedIds).forEach((id) => addDescendants(id));
 
     return tasks.filter((t) => includedIds.has(t.id));
-  }, [tasks, query, teamFilter, executorFilter, statusFilter, filterYear, filterMonth, view]);
+  }, [tasks, query, selectedTeamIds, executorFilter, statusFilter, filterYear, filterMonth, view]);
 
   useEffect(() => {
     if (view === "person") {
@@ -875,7 +954,7 @@ export default function ManagedTaskManager({ tasks, calendars, context }: { task
     }
     return getDisplayRange(filteredTasks.length ? filteredTasks : tasks);
   }, [filteredTasks, tasks, filterYear, filterMonth]);
-  const rows = useMemo(() => (view === "wbs" ? buildWbsRows(filteredTasks, collapsedIds) : buildGroupedRows(filteredTasks, view, positionMap, collapsedIds, context, days)), [filteredTasks, view, collapsedIds, positionMap, context, days]);
+  const rows = useMemo(() => (view === "wbs" ? buildWbsRows(filteredTasks, collapsedIds) : buildGroupedRows(filteredTasks, view, positionMap, collapsedIds, context, days, selectedTeamIds)), [filteredTasks, view, collapsedIds, positionMap, context, days, selectedTeamIds]);
   const parentOptions = tasks.filter((task) => task.level < 3);
   const selectedParent = tasks.find((task) => task.id === form.parentId);
   const versionOptions = form.versionType === "PRODUCT" ? context.versions.products : form.versionType === "PROJECT" ? context.versions.projects : [];
@@ -1017,32 +1096,39 @@ export default function ManagedTaskManager({ tasks, calendars, context }: { task
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-        <div className="grid overflow-hidden rounded-xl border border-border bg-card p-1 shadow-sm sm:grid-cols-2">
-          {[
-            { key: "wbs", label: "WBS 任务视图", icon: Layers3 },
-            { key: "person", label: "个人甘特", icon: CalendarDays },
-          ].map((item) => {
-            const Icon = item.icon;
-            const active = view === item.key;
-            return (
-              <button key={item.key} onClick={() => setView(item.key as ViewMode)} className={`flex min-h-12 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition ${active ? "bg-accent text-white ring-1 ring-border" : "text-muted-foreground hover:bg-accent hover:text-white"}`}>
-                <Icon className="h-4 w-4" />
-                {item.label}
-              </button>
-            );
-          })}
-        </div>
+        {isDeptManager ? (
+          <div className="grid overflow-hidden rounded-xl border border-border bg-card p-1 shadow-sm sm:grid-cols-2">
+            {[
+              { key: "wbs", label: "WBS 任务视图", icon: Layers3 },
+              { key: "person", label: "个人甘特", icon: CalendarDays },
+            ].map((item) => {
+              const Icon = item.icon;
+              const active = view === item.key;
+              return (
+                <button key={item.key} onClick={() => setView(item.key as ViewMode)} className={`flex min-h-12 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition ${active ? "bg-indigo-600 text-white font-bold shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+                  <Icon className="h-4 w-4" />
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2 px-4 shadow-sm text-sm font-semibold text-foreground">
+            <Layers3 className="h-4 w-4 text-indigo-500" />
+            WBS 任务视图
+          </div>
+        )}
         <div className="flex flex-wrap gap-3">
           <label className="relative min-w-[220px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务名称/成果书..." className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-3 text-sm text-white outline-none focus:border-indigo-500" />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务名称/成果书..." className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-3 text-sm text-foreground outline-none focus:border-indigo-500" />
           </label>
           <div className="relative">
             <input
               type="month"
               value={filterYM}
               onChange={(event) => setFilterYM(event.target.value)}
-              className={`${controlClass} text-white cursor-pointer pr-8`}
+              className={`${controlClass} text-foreground cursor-pointer pr-8`}
               style={{ colorScheme: "dark" }}
             />
             {filterYM && (
@@ -1055,7 +1141,59 @@ export default function ManagedTaskManager({ tasks, calendars, context }: { task
               </button>
             )}
           </div>
-          <select value={teamFilter} onChange={(event) => setTeamFilter(event.target.value)} className={controlClass}><option value="">所有团队</option>{context.teams.map((team) => <option key={team.id} value={team.id}>{team.name}</option>)}</select>
+          <div ref={teamDropdownRef} className="relative min-w-[160px]">
+            <button
+              type="button"
+              onClick={() => setIsTeamDropdownOpen(!isTeamDropdownOpen)}
+              className={`${controlClass} flex w-full items-center justify-between gap-2 text-left cursor-pointer`}
+            >
+              <span className="truncate">{selectedTeamsLabel()}</span>
+              <span className="text-xs text-muted-foreground ml-1">▼</span>
+            </button>
+            {isTeamDropdownOpen && (
+              <div className="absolute left-0 top-full mt-1.5 w-64 rounded-xl border border-border bg-card p-2 shadow-2xl z-50 max-h-64 overflow-y-auto space-y-1 backdrop-blur-md">
+                <div className="flex items-center justify-between border-b border-border/60 pb-1.5 px-2 mb-1 text-xs text-muted-foreground font-medium">
+                  <span>产品小组筛选</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTeamIds(context.teams.map((t) => t.id))}
+                      className="text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      全选
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTeamIds([])}
+                      className="text-muted-foreground hover:underline cursor-pointer"
+                    >
+                      清空
+                    </button>
+                  </div>
+                </div>
+                {context.teams.map((team) => {
+                  const isChecked = selectedTeamIds.includes(team.id);
+                  return (
+                    <label key={team.id} className="flex items-center gap-2 px-2 py-1.5 text-xs text-foreground hover:bg-white/[0.05] rounded-lg cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSelectedTeamIds((prev) =>
+                            prev.includes(team.id)
+                              ? prev.filter((id) => id !== team.id)
+                              : [...prev, team.id]
+                          );
+                        }}
+                        className="rounded border-border bg-transparent text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                      />
+                      <span className="truncate">{team.name}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            )}
+          </div>
           <select value={executorFilter} onChange={(event) => setExecutorFilter(event.target.value)} className={controlClass}><option value="">所有经办人</option>{context.users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select>
           <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={controlClass}><option value="">所有状态</option>{statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select>
           <button onClick={() => openCreate()} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"><Plus className="h-4 w-4" />创建任务</button>

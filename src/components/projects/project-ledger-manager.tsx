@@ -63,7 +63,7 @@ const statusLabel = Object.fromEntries(
   statusOptions.map((item) => [item.value, item.label]),
 ) as Record<ProjectStatus, string>;
 const fieldClass =
-  "w-full rounded-lg border border-border bg-input px-3 py-2 text-xs text-white outline-none transition focus:border-cyan-500/60";
+  "w-full rounded-lg border border-border bg-input px-3 py-2 text-xs text-foreground outline-none transition focus:border-cyan-500/60";
 type ProjectFormState = {
   name: string;
   key: string;
@@ -291,7 +291,7 @@ export default function ProjectLedgerManager({
             {filtered.map((item) => (
               <div
                 key={item.id}
-                className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 transition ${item.id === selected?.id && mode !== "create" ? "bg-cyan-500/10 text-cyan-200 ring-1 ring-cyan-500/25" : item.warrantyExpired ? "bg-red-500/[0.06] text-slate-200 ring-1 ring-red-500/30 hover:bg-red-500/10" : "text-slate-300 hover:bg-white/[0.04]"}`}
+                className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 transition ${item.id === selected?.id && mode !== "create" ? "bg-cyan-500/15 ring-1 ring-cyan-500/30 font-semibold" : item.warrantyExpired ? "bg-red-500/[0.08] text-foreground ring-1 ring-red-500/30 hover:bg-red-500/10" : "text-foreground hover:bg-muted"}`}
               >
                 <button
                   onClick={() => {
@@ -301,21 +301,21 @@ export default function ProjectLedgerManager({
                   }}
                   className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
                 >
-                  <FolderKanban className="h-4 w-4 shrink-0 text-slate-500" />
+                  <FolderKanban className={`h-4 w-4 shrink-0 ${item.id === selected?.id && mode !== "create" ? "text-cyan-600 dark:text-cyan-300" : "text-slate-500"}`} />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-medium">
+                    <span className={`block truncate text-xs ${item.id === selected?.id && mode !== "create" ? "font-bold text-cyan-900 dark:text-cyan-100" : "font-medium text-foreground"}`}>
                       {item.name}
                     </span>
-                    <span className="block truncate text-[10px] text-muted-foreground">
+                    <span className={`block truncate text-[10px] ${item.id === selected?.id && mode !== "create" ? "text-cyan-700 dark:text-cyan-300" : "text-muted-foreground"}`}>
                       {item.key} · {item.customerName}
                     </span>
                   </span>
-                  <span className="rounded bg-black/20 px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] ${item.id === selected?.id && mode !== "create" ? "bg-cyan-500/20 text-cyan-900 dark:text-cyan-100 font-bold" : "bg-muted text-muted-foreground font-medium"}`}>
                     {item.versions.length}
                   </span>
                 </button>
                 {item.warrantyExpired && (
-                  <span className="shrink-0 rounded border border-red-500/25 bg-red-500/10 px-1.5 py-0.5 text-[9px] font-semibold text-red-300">
+                  <span className="shrink-0 rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-700 dark:text-red-300">
                     质保已过期
                   </span>
                 )}

@@ -54,7 +54,7 @@ const initialCalendar = {
 };
 
 const controlClass =
-  "min-h-10 rounded-lg border border-border bg-input px-3 py-2 text-sm text-white outline-none focus:border-indigo-500 w-full";
+  "min-h-10 rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground outline-none focus:border-indigo-500 w-full";
 
 export default function WorkCalendarManager({
   calendars: initialCalendars,

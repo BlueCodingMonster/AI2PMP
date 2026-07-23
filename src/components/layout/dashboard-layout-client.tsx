@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { signOut } from "next-auth/react";
 import SdlcIcon from "@/components/ui/sdlc-icon";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { globalSearch } from "@/actions/search";
 import {
   LayoutDashboard,
@@ -26,6 +27,8 @@ import {
   GanttChartSquare,
   CalendarDays,
   ScrollText,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from "lucide-react";
 
 const navItems = [
@@ -67,6 +70,7 @@ export default function DashboardLayoutClient({
 }: DashboardLayoutClientProps) {
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [systemMenuOpen, setSystemMenuOpen] = useState(false);
 
@@ -115,15 +119,14 @@ export default function DashboardLayoutClient({
     }
   }, [pathname]);
 
-
-
   const isActive = (href: string) => {
     if (href === "/") return pathname === "/";
     return pathname.startsWith(href);
   };
 
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/login" });
+    await signOut({ redirect: false });
+    window.location.href = "/login";
   };
 
   const userInitials = user.name ? user.name.slice(0, 2) : "用";
@@ -141,23 +144,26 @@ export default function DashboardLayoutClient({
       {/* ===== 侧边栏 ===== */}
       <aside
         className={`
-          fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-sidebar border-r border-border
-          transition-transform duration-300 ease-in-out
+          fixed inset-y-0 left-0 z-50 flex flex-col bg-sidebar border-r border-border
+          transition-all duration-300 ease-in-out
           lg:relative lg:translate-x-0
-          ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}
+          ${isCollapsed ? "lg:w-16" : "lg:w-64"}
+          ${sidebarOpen ? "translate-x-0 w-64" : "-translate-x-full w-64"}
         `}
       >
         {/* 品牌区域 */}
-        <div className="flex h-16 items-center justify-between border-b border-border px-5">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/[0.02] border border-white/10 shadow-lg shadow-black/20 backdrop-blur-md group-hover:scale-105 transition-transform duration-300">
+        <div className={`flex h-16 items-center border-b border-border transition-all ${
+          isCollapsed ? "lg:justify-center lg:px-0 px-4 justify-between" : "justify-between px-4"
+        }`}>
+          <Link href="/" className="flex items-center gap-3 group shrink-0" title="SDLC 研发效能平台">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.02] border border-white/10 shadow-lg shadow-black/20 backdrop-blur-md group-hover:scale-105 transition-transform duration-300">
               <SdlcIcon size={32} colored={true} />
             </div>
-            <div>
-              <span className="text-lg font-bold tracking-tight text-white leading-none block">
+            <div className={`${isCollapsed ? "lg:hidden" : "block"} transition-opacity duration-200`}>
+              <span className="text-lg font-bold tracking-tight text-white leading-none block whitespace-nowrap">
                 SDLC
               </span>
-              <span className="text-[10px] text-indigo-300/70 font-medium tracking-tight leading-none block mt-0.5">
+              <span className="text-[10px] text-indigo-300/70 font-medium tracking-tight leading-none block mt-0.5 whitespace-nowrap">
                 研发效能平台
               </span>
             </div>
@@ -173,7 +179,7 @@ export default function DashboardLayoutClient({
         </div>
 
         {/* 导航列表 */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
+        <nav className="flex-1 overflow-y-auto px-2 py-4">
           <ul className="space-y-1">
             {navItems.map((item) => {
               if (item.label === "系统管理" && !user.isAdmin) {
@@ -184,13 +190,24 @@ export default function DashboardLayoutClient({
                 return (
                   <li key={item.label}>
                     <button
-                      onClick={() => setSystemMenuOpen(!systemMenuOpen)}
+                      onClick={() => {
+                        if (isCollapsed) {
+                          setIsCollapsed(false);
+                          setSystemMenuOpen(true);
+                        } else {
+                          setSystemMenuOpen(!systemMenuOpen);
+                        }
+                      }}
+                      title={item.label}
                       className={`
-                        group flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium
-                        transition-all duration-200
+                        group flex items-center rounded-xl transition-all duration-200
+                        ${isCollapsed 
+                          ? "lg:w-10 lg:h-10 lg:mx-auto lg:p-0 lg:justify-center w-full px-3 py-2.5 justify-between" 
+                          : "w-full px-3 py-2.5 justify-between text-sm font-medium"
+                        }
                         ${
                           isSysActive
-                            ? "text-white font-semibold bg-white/[0.03]"
+                            ? "text-white font-semibold bg-indigo-600/20 dark:bg-indigo-500/20 border border-indigo-500/30"
                             : "text-sidebar-foreground hover:bg-accent hover:text-white"
                         }
                       `}
@@ -203,12 +220,12 @@ export default function DashboardLayoutClient({
                               : "text-muted-foreground group-hover:text-white"
                           }`}
                         />
-                        <span>{item.label}</span>
+                        <span className={isCollapsed ? "lg:hidden text-sm" : "block text-sm"}>{item.label}</span>
                       </div>
                       <ChevronDown
                         className={`h-4 w-4 text-muted-foreground transition-transform duration-200 ${
                           systemMenuOpen ? "rotate-180" : ""
-                        }`}
+                        } ${isCollapsed ? "lg:hidden" : "block"}`}
                       />
                     </button>
                     {systemMenuOpen && (
@@ -220,17 +237,21 @@ export default function DashboardLayoutClient({
                               <Link
                                 href={child.href}
                                 onClick={() => setSidebarOpen(false)}
+                                title={child.label}
                                 className={`
-                                  group flex items-center gap-3 rounded-xl pl-9 pr-3 py-2 text-xs font-medium
-                                  transition-all duration-200 relative
+                                  group flex items-center rounded-xl transition-all duration-200 relative
+                                  ${isCollapsed
+                                    ? "lg:w-10 lg:h-10 lg:mx-auto lg:p-0 lg:justify-center pl-9 pr-3 py-2"
+                                    : "pl-9 pr-3 py-2 text-xs font-medium"
+                                  }
                                   ${
                                     active
-                                      ? "bg-indigo-600/10 text-white shadow-sm font-semibold"
+                                      ? "bg-indigo-600/20 text-white shadow-sm font-semibold border border-indigo-500/30"
                                       : "text-sidebar-foreground/80 hover:bg-accent hover:text-white"
                                   }
                                 `}
                               >
-                                {active && (
+                                {active && !isCollapsed && (
                                   <div className="absolute left-4 h-4 w-1 rounded-r-full bg-sidebar-active" />
                                 )}
                                 <child.icon
@@ -240,7 +261,7 @@ export default function DashboardLayoutClient({
                                       : "text-muted-foreground group-hover:text-white"
                                   }`}
                                 />
-                                <span>{child.label}</span>
+                                <span className={isCollapsed ? "lg:hidden" : "block"}>{child.label}</span>
                               </Link>
                             </li>
                           );
@@ -257,28 +278,32 @@ export default function DashboardLayoutClient({
                   <Link
                     href={item.href}
                     onClick={() => setSidebarOpen(false)}
+                    title={item.label}
                     className={`
-                      group flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium
-                      transition-all duration-200 relative
+                      group flex items-center rounded-xl transition-all duration-200 relative
+                      ${isCollapsed
+                        ? "lg:w-10 lg:h-10 lg:mx-auto lg:p-0 lg:justify-center px-3 py-2.5"
+                        : "px-3 py-2.5 text-sm font-medium"
+                      }
                       ${
                         active
-                          ? "bg-gradient-to-r from-indigo-600/20 to-purple-600/10 text-white shadow-sm font-semibold"
-                          : "text-sidebar-foreground hover:bg-accent hover:text-white"
+                          ? "bg-gradient-to-r from-indigo-600/25 to-purple-600/15 text-indigo-600 dark:text-white shadow-sm font-semibold border border-indigo-500/30"
+                          : "text-sidebar-foreground hover:bg-accent hover:text-foreground"
                       }
                     `}
                   >
-                    {/* 激活指示条 */}
-                    {active && (
+                    {/* 激活指示条 (仅在展开模式显示) */}
+                    {active && !isCollapsed && (
                       <div className="absolute left-0 h-5 w-1 rounded-r-full bg-sidebar-active" />
                     )}
                     <item.icon
                       className={`h-5 w-5 shrink-0 transition-colors ${
                         active
-                          ? "text-indigo-400"
-                          : "text-muted-foreground group-hover:text-white"
+                          ? "text-indigo-600 dark:text-indigo-400"
+                          : "text-muted-foreground group-hover:text-foreground"
                       }`}
                     />
-                    <span>{item.label}</span>
+                    <span className={isCollapsed ? "lg:hidden" : "block"}>{item.label}</span>
                   </Link>
                 </li>
               );
@@ -287,13 +312,18 @@ export default function DashboardLayoutClient({
         </nav>
 
         {/* 底部用户信息（侧边栏） */}
-        <div className="border-t border-border p-3 bg-black/10">
-          <div className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm text-sidebar-foreground">
-            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white uppercase">
+        <div className={`border-t border-border p-2 pb-4 bg-muted/20 transition-all ${isCollapsed ? "lg:pb-5" : ""}`}>
+          <div
+            className={`flex items-center rounded-xl text-sm text-sidebar-foreground transition-all ${
+              isCollapsed ? "lg:w-10 lg:h-10 lg:mx-auto lg:p-0 lg:justify-center px-3 py-2.5 gap-3" : "px-3 py-2.5 gap-3"
+            }`}
+            title={`${user.name || "未指定姓名"} (@${user.username || "未设置"})`}
+          >
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white uppercase shadow-sm">
               {userInitials}
             </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-white truncate">{user.name || "未指定姓名"}</p>
+            <div className={`flex-1 min-w-0 ${isCollapsed ? "lg:hidden" : "block"}`}>
+              <p className="text-sm font-medium text-foreground truncate">{user.name || "未指定姓名"}</p>
               <p className="text-xs text-muted-foreground truncate">@{user.username || "未设置登录名"}</p>
             </div>
           </div>
@@ -304,13 +334,21 @@ export default function DashboardLayoutClient({
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* 顶部栏 */}
         <header className="flex h-16 items-center justify-between border-b border-border bg-background/80 px-4 backdrop-blur-md lg:px-6">
-          {/* 左侧：汉堡菜单 + 搜索 */}
+          {/* 左侧：汉堡菜单/折叠切换 + 搜索 */}
           <div className="flex items-center gap-4">
             <button
               onClick={() => setSidebarOpen(true)}
               className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-white lg:hidden"
             >
               <Menu className="h-5 w-5" />
+            </button>
+
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="hidden lg:flex items-center justify-center rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground transition-colors"
+              title={isCollapsed ? "展开侧边栏" : "折叠侧边栏"}
+            >
+              {isCollapsed ? <PanelLeftOpen className="h-5 w-5" /> : <PanelLeftClose className="h-5 w-5" />}
             </button>
 
             <div className="relative hidden sm:block">
@@ -434,8 +472,11 @@ export default function DashboardLayoutClient({
             </div>
           </div>
 
-          {/* 右侧：通知 + 用户 */}
+          {/* 右侧：主题切换 + 用户 */}
           <div className="flex items-center gap-3">
+            {/* 主题切换按钮 */}
+            <ThemeToggle />
+
             {/* 用户下拉 */}
             <div className="relative">
               <button
@@ -445,7 +486,7 @@ export default function DashboardLayoutClient({
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 text-xs font-bold text-white uppercase">
                   {userInitials}
                 </div>
-                <span className="hidden font-medium text-white md:inline">
+                <span className="hidden font-medium text-foreground md:inline">
                   {user.name || "未指定"}
                 </span>
                 <ChevronDown

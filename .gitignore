@@ -55,3 +55,8 @@ tech_center_roster.xlsx
 .superpowers/
 .tmp/
 *.log
+
+# build and scratch artifacts
+dist/
+dist.zip
+scratch/

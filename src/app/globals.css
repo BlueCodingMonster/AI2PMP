@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
-/* ===== 全局暗色主题变量 ===== */
-:root {
+/* ===== 暗色主题变量 (默认与 .dark) ===== */
+:root,
+.dark {
   /* 背景色 - 深海军蓝 */
   --background: oklch(0.145 0.02 260);
   --foreground: oklch(0.94 0.01 260);
@@ -49,6 +50,165 @@
   --sidebar-foreground: oklch(0.80 0.01 260);
   --sidebar-active: oklch(0.55 0.22 270);
 }
+
+/* ===== 浅色主题变量 (.light) ===== */
+.light {
+  /* 背景色 - 冰爽优雅亮白/浅淡蓝灰 */
+  --background: oklch(0.985 0.005 260);
+  --foreground: oklch(0.18 0.02 260);
+
+  /* 主色调 - 靛蓝/紫宝蓝 */
+  --primary: oklch(0.52 0.22 270);
+  --primary-hover: oklch(0.46 0.22 270);
+  --primary-foreground: oklch(0.99 0 0);
+
+  /* 卡片 */
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.20 0.02 260);
+
+  /* 静音色 */
+  --muted: oklch(0.955 0.008 260);
+  --muted-foreground: oklch(0.45 0.015 260);
+
+  /* 强调色 */
+  --accent: oklch(0.94 0.03 270);
+  --accent-foreground: oklch(0.25 0.03 270);
+
+  /* 边框 */
+  --border: oklch(0.91 0.01 260);
+  --border-hover: oklch(0.80 0.03 270);
+
+  /* 输入框 */
+  --input: oklch(0.99 0 0);
+  --input-focus: oklch(0.52 0.22 270);
+
+  /* 危险色 */
+  --destructive: oklch(0.58 0.2 25);
+  --destructive-foreground: oklch(0.98 0 0);
+
+  /* 成功色 */
+  --success: oklch(0.55 0.18 145);
+
+  /* 警告色 */
+  --warning: oklch(0.65 0.18 75);
+
+  /* 侧边栏 */
+  --sidebar: oklch(0.975 0.005 260);
+  --sidebar-foreground: oklch(0.30 0.02 260);
+  --sidebar-active: oklch(0.52 0.22 270);
+}
+
+/* ===== 浅色模式全局色彩适配与图标/字体对比度增强 ===== */
+.light {
+  color-scheme: light;
+}
+
+/* 浅色模式下硬编码标题与纯白文字防护，避免白底白字 */
+.light h1:not([class*="text-indigo"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h2:not([class*="text-indigo"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h3:not([class*="text-indigo"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h4,
+.light h5,
+.light h6 {
+  color: var(--foreground);
+}
+
+/* 浅色模式下通用卡片与标题项内 text-white 智能转为高对比度文字（排除按钮、链接及实色/渐变容器） */
+.light .bg-card .text-white:not(button):not(button *):not(a):not(a *),
+.light .bg-background .text-white:not(button):not(button *):not(a):not(a *),
+.light td .text-white:not(button):not(button *):not(a):not(a *),
+.light th .text-white:not(button):not(button *):not(a):not(a *),
+.light li .text-white:not(button):not(button *):not(a):not(a *),
+.light label.text-white {
+  color: var(--foreground);
+}
+
+/* 浅色模式下所有实色与渐变按钮/链接内部文字强制保持纯白 */
+.btn-white-text,
+.btn-white-text *,
+.light .btn-white-text,
+.light .btn-white-text *,
+.light button[class*="bg-indigo-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light button[class*="bg-emerald-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light button[class*="bg-purple-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light button[class*="bg-rose-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light button[class*="bg-blue-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light button[class*="bg-amber-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light button[class*="bg-primary"],
+.light button[class*="bg-gradient-"],
+.light a[class*="bg-indigo-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light a[class*="bg-emerald-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light a[class*="bg-purple-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
+.light a[class*="bg-gradient-"] {
+  color: #ffffff !important;
+}
+
+.light button[class*="bg-indigo-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light button[class*="bg-emerald-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light button[class*="bg-purple-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light button[class*="bg-rose-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light button[class*="bg-blue-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light button[class*="bg-amber-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light button[class*="bg-primary"] *,
+.light button[class*="bg-gradient-"] *,
+.light a[class*="bg-indigo-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light a[class*="bg-emerald-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light a[class*="bg-purple-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
+.light a[class*="bg-gradient-"] * {
+  color: #ffffff !important;
+}
+
+/* 浅色模式下图标与鲜艳亮色字体对比度加深，防浅灰白化 */
+.light .text-indigo-400 { color: oklch(0.48 0.22 270) !important; }
+.light .text-purple-400 { color: oklch(0.48 0.22 300) !important; }
+.light .text-cyan-400 { color: oklch(0.45 0.18 210) !important; }
+.light .text-teal-400 { color: oklch(0.45 0.16 180) !important; }
+.light .text-emerald-400 { color: oklch(0.45 0.18 150) !important; }
+.light .text-amber-400 { color: oklch(0.48 0.18 70) !important; }
+.light .text-rose-400 { color: oklch(0.48 0.20 15) !important; }
+
+/* 浅色模式下数据表格 th 表头柔和浅灰阶背景 */
+.light table thead,
+.light table thead tr,
+.light table th {
+  background-color: oklch(0.965 0.008 260) !important;
+  color: oklch(0.35 0.04 260) !important;
+}
+.light .text-blue-400 { color: oklch(0.45 0.20 250) !important; }
+.light .text-sky-400 { color: oklch(0.45 0.18 230) !important; }
+
+/* 浅色模式下半透明白色背景（如图标底层）智能转为柔和浅色底纹 */
+.light .bg-white\/5,
+.light .bg-white\/10,
+.light .bg-white\/\[0\.02\],
+.light .bg-white\/\[0\.03\],
+.light .bg-white\/\[0\.05\],
+.light .bg-black\/10,
+.light .bg-black\/20,
+.light .bg-black\/40 {
+  background-color: var(--muted);
+}
+
+.light .border-white\/5,
+.light .border-white\/10,
+.light .border-white\/15,
+.light .border-white\/20 {
+  border-color: var(--border);
+}
+
+/* 浅色模式下彩色图标底框与边框微调（增强层次与柔和质感） */
+.light .bg-indigo-500\/10, .light .bg-indigo-600\/20 { background-color: oklch(0.94 0.04 270) !important; }
+.light .bg-purple-500\/10, .light .bg-purple-600\/20 { background-color: oklch(0.94 0.04 300) !important; }
+.light .bg-amber-500\/10, .light .bg-amber-600\/20 { background-color: oklch(0.95 0.04 70) !important; }
+.light .bg-emerald-500\/10, .light .bg-emerald-600\/20 { background-color: oklch(0.94 0.04 150) !important; }
+.light .bg-rose-500\/10, .light .bg-rose-600\/20 { background-color: oklch(0.94 0.04 15) !important; }
+.light .bg-cyan-500\/10, .light .bg-cyan-600\/20 { background-color: oklch(0.94 0.04 210) !important; }
+
+.light .border-indigo-500\/20 { border-color: oklch(0.88 0.05 270) !important; }
+.light .border-purple-500\/20 { border-color: oklch(0.88 0.05 300) !important; }
+.light .border-amber-500\/20 { border-color: oklch(0.88 0.05 70) !important; }
+.light .border-emerald-500\/20 { border-color: oklch(0.88 0.05 150) !important; }
+.light .border-rose-500\/20 { border-color: oklch(0.88 0.05 15) !important; }
 
 /* Tailwind v4 主题令牌注入 */
 @theme inline {
@@ -118,18 +278,36 @@ body {
 }
 
 /* ===== 玻璃拟态工具类 ===== */
-.glass {
+.dark .glass,
+:root:not(.light) .glass {
   background: rgba(255, 255, 255, 0.03);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.glass-strong {
+.light .glass {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .glass-strong,
+:root:not(.light) .glass-strong {
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.light .glass-strong {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  box-shadow: 0 10px 30px -4px rgba(0, 0, 0, 0.08);
 }
 
 /* ===== 动画关键帧 ===== */

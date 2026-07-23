@@ -84,7 +84,7 @@ export default function PlanListClient({
       <button
         type="button"
         onClick={() => setIsTeamDropdownOpen(!isTeamDropdownOpen)}
-        className="w-full text-left rounded-lg border border-border bg-input px-3 py-2 text-sm text-white flex justify-between items-center"
+        className="w-full text-left rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground flex justify-between items-center"
       >
         <span className="truncate">{selectedTeamsLabel()}</span>
         <span className="text-xs text-muted-foreground ml-1">▼</span>
@@ -94,7 +94,7 @@ export default function PlanListClient({
           {teams.map((team) => {
             const isChecked = selectedTeamIds.includes(team.id);
             return (
-              <label key={team.id} className="flex items-center gap-2 px-2 py-1 text-sm text-white hover:bg-white/5 rounded cursor-pointer select-none">
+              <label key={team.id} className="flex items-center gap-2 px-2 py-1 text-sm text-foreground hover:bg-muted rounded cursor-pointer select-none">
                 <input
                   type="checkbox"
                   checked={isChecked}

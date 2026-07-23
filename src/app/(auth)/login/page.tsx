@@ -255,8 +255,8 @@ function LoginForm() {
           return;
         }
 
-        router.push(callbackUrl);
-        router.refresh();
+        // 强制整页跳转，确保浏览器完成 Cookie 的完整写入并重新发送给 Middleware
+        window.location.href = callbackUrl;
       } catch (err) {
         console.error("登录错误:", err);
         setError("登录出错，请稍后重试");

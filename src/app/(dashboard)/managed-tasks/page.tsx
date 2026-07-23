@@ -41,6 +41,7 @@ export default async function ManagedTasksPage() {
 
   return (
     <ManagedTaskManager
+      isDeptManager={isDeptManager}
       context={filteredContext}
       tasks={tasks.map((task) => ({
         id: task.id,

@@ -220,7 +220,7 @@ export default async function DashboardPage() {
         {/* ===== 欢迎区域 ===== */}
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold text-white">你好，{username}</h1>
+            <h1 className="text-2xl font-bold text-foreground">你好，{username}</h1>
             <span className="inline-flex items-center rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-xs font-medium text-indigo-400 border border-indigo-500/20">
               {isSystemAdmin ? "系统管理员" : `${userDept} · 部门经理`}
             </span>
@@ -241,7 +241,7 @@ export default async function DashboardPage() {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">{card.label}</p>
-                  <p className="mt-2 text-3xl font-bold text-white">{card.value}</p>
+                  <p className="mt-2 text-3xl font-bold text-foreground">{card.value}</p>
                   <p className="mt-1 text-xs text-muted-foreground/80">{card.trend}</p>
                 </div>
                 <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-white/5 ${card.iconColor}`}>
@@ -257,7 +257,7 @@ export default async function DashboardPage() {
           {/* 最近动态 */}
           <div className="rounded-2xl border border-border bg-card p-5">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-white">全局动态监控</h2>
+              <h2 className="text-base font-semibold text-foreground">全局动态监控</h2>
               <span className="flex h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
             </div>
 
@@ -309,7 +309,7 @@ export default async function DashboardPage() {
                     </div>
 
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-card-foreground group-hover:text-white transition-colors">
+                      <p className="truncate text-sm font-medium text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {todo.title}
                       </p>
                       <p className="truncate text-xs text-muted-foreground mt-0.5">
@@ -518,7 +518,7 @@ export default async function DashboardPage() {
                       <div className="h-2 w-2 rounded-sm bg-transparent transition-colors group-hover:bg-rose-500/50" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-card-foreground group-hover:text-white transition-colors">
+                      <p className="truncate text-sm font-medium text-foreground group-hover:text-rose-600 dark:group-hover:text-rose-400 transition-colors">
                         {req.title}
                       </p>
                       <p className="truncate text-xs text-muted-foreground mt-0.5">
@@ -558,7 +558,7 @@ export default async function DashboardPage() {
                       <div className="h-2 w-2 rounded-sm bg-transparent transition-colors group-hover:bg-indigo-500/50" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-card-foreground group-hover:text-white transition-colors">
+                      <p className="truncate text-sm font-medium text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                         {todo.title}
                       </p>
                       <p className="truncate text-xs text-muted-foreground mt-0.5">
@@ -728,7 +728,7 @@ export default async function DashboardPage() {
       {/* ===== 欢迎区域 ===== */}
       <div>
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold text-white">你好，{username} 👋</h1>
+          <h1 className="text-2xl font-bold text-foreground">你好，{username} 👋</h1>
           <span className="inline-flex items-center rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-medium text-purple-400 border border-purple-500/20">
             {userDept} · {userPosition}
           </span>
@@ -781,8 +781,8 @@ export default async function DashboardPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm text-card-foreground">
-                      <span className="font-medium text-white">{activity.user}</span> {activity.action}{" "}
-                      <span className="font-medium text-indigo-400">{activity.target}</span>
+                      <span className="font-medium text-foreground">{activity.user}</span> {activity.action}{" "}
+                      <span className="font-medium text-indigo-500 dark:text-indigo-400">{activity.target}</span>
                     </p>
                     <p className="mt-0.5 text-xs text-muted-foreground">{activity.time}</p>
                   </div>
@@ -817,7 +817,7 @@ export default async function DashboardPage() {
                   </div>
 
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm text-card-foreground group-hover:text-white transition-colors">
+                    <p className="truncate text-sm font-medium text-foreground group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                       {todo.title}
                     </p>
                     <p className="truncate text-xs text-muted-foreground mt-0.5">

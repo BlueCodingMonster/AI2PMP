@@ -362,7 +362,14 @@ export async function getManagedTaskContext() {
 }
 
 export async function getManagedTasks() {
-  const tasks = await prisma.managedTask.findMany({ include: taskInclude, orderBy: [{ planStartDate: "asc" }, { sequenceNo: "asc" }] });
+  const tasks = await prisma.managedTask.findMany({
+    include: taskInclude,
+    orderBy: [
+      { productLineTeam: { name: "asc" } },
+      { planStartDate: "asc" },
+      { sequenceNo: "asc" },
+    ],
+  });
   const calendars = await prisma.workCalendarYear.findMany({ include: { days: { orderBy: { date: "asc" } } }, orderBy: [{ year: "desc" }, { updatedAt: "desc" }] });
   return { tasks, calendars };
 }

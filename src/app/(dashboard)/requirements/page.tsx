@@ -171,7 +171,7 @@ export default async function RequirementsPage({ searchParams }: PageProps) {
           <h1 className="text-2xl font-bold tracking-tight text-white">需求池</h1>
           <span className="whitespace-nowrap rounded-md border border-border bg-muted/30 px-2 py-1 text-xs text-muted-foreground">{total} 条</span>
         </div>
-        <Link href="/requirements/new" className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 text-sm font-medium text-white"><Plus className="h-4 w-4" />新建需求</Link>
+        <Link href="/requirements/new" className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-2 text-sm font-semibold !text-white btn-white-text shadow-md hover:from-indigo-500 hover:to-purple-500"><Plus className="h-4 w-4 !text-white" />新建需求</Link>
       </div>
 
       <div className="glass rounded-xl p-4">
