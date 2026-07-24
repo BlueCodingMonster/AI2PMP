@@ -957,43 +957,44 @@ export default function TaskGridView({
 
         {/* 表格体 */}
         {visibleRows.length === 0 ? (
-          <div className="py-20 text-center text-sm text-muted-foreground flex flex-col items-center gap-3">
-            <span>暂无任务记录，可点击下方按钮直接新增</span>
+          <div className="py-24 text-center text-sm text-muted-foreground flex flex-col items-center gap-3">
+            <span>暂无任务记录</span>
             <button
               onClick={handleAddDraftRootTask}
-              className="rounded-lg bg-indigo-500/10 px-4 py-2 text-xs font-semibold text-indigo-400 hover:bg-indigo-500/20 transition flex items-center gap-1.5"
+              className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white hover:bg-indigo-500 shadow-md shadow-indigo-500/20 transition flex items-center gap-2 active:scale-95"
             >
               <Plus className="h-4 w-4" /> 添加一级任务行
             </button>
           </div>
         ) : (
-          visibleRows.map(({ task, depth, hasChildren }) => (
-            <GridRow
-              key={task.id}
-              task={task}
-              depth={depth}
-              hasChildren={hasChildren}
-              isCollapsed={collapsedIds.has(task.id)}
-              context={context}
-              onToggleCollapse={toggleCollapse}
-              onCreateSubTask={handleAddDraftSubTask}
-              onRemove={onRemove}
-              onFieldChange={handleFieldChange}
-              onSaveDraft={handleSaveDraft}
-              onDiscardDraft={handleDiscardDraft}
-              savingTaskId={savingTaskId}
-              savedTaskId={savedTaskId}
-            />
-          ))
+          <>
+            {visibleRows.map(({ task, depth, hasChildren }) => (
+              <GridRow
+                key={task.id}
+                task={task}
+                depth={depth}
+                hasChildren={hasChildren}
+                isCollapsed={collapsedIds.has(task.id)}
+                context={context}
+                onToggleCollapse={toggleCollapse}
+                onCreateSubTask={handleAddDraftSubTask}
+                onRemove={onRemove}
+                onFieldChange={handleFieldChange}
+                onSaveDraft={handleSaveDraft}
+                onDiscardDraft={handleDiscardDraft}
+                savingTaskId={savingTaskId}
+                savedTaskId={savedTaskId}
+              />
+            ))}
+            {/* 表格底部【+ 添加一级任务行】直接插行按钮 */}
+            <button
+              onClick={handleAddDraftRootTask}
+              className="w-full py-2.5 bg-card/60 hover:bg-indigo-500/10 text-xs font-semibold text-indigo-400 flex items-center justify-center gap-1.5 transition select-none border-b border-border/50"
+            >
+              <Plus className="h-4 w-4" /> 添加一级任务行
+            </button>
+          </>
         )}
-
-        {/* 表格底部【+ 添加一级任务行】直接插行按钮 */}
-        <button
-          onClick={handleAddDraftRootTask}
-          className="w-full py-2.5 bg-card/60 hover:bg-indigo-500/10 text-xs font-semibold text-indigo-400 flex items-center justify-center gap-1.5 transition select-none border-b border-border/50"
-        >
-          <Plus className="h-4 w-4" /> 添加一级任务行
-        </button>
       </div>
     </div>
   );
