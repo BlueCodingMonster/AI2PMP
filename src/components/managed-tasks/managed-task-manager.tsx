@@ -1369,8 +1369,8 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
   }, [form.planStartDate, form.planEndDate, form.actualStartAt, form.actualFinishAt, dayTypesMap]);
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+    <div className="space-y-2.5">
+      <div className="flex flex-col gap-2.5 xl:flex-row xl:items-center xl:justify-between">
         {isDeptManager ? (
           <div className="inline-grid overflow-hidden rounded-xl border border-border bg-card p-1 shadow-sm sm:grid-cols-3">
             {[
@@ -1509,11 +1509,15 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
         </div>
       </div>
 
-      <div className="rounded-xl border border-indigo-500/20 bg-card px-5 py-4 text-sm text-card-foreground shadow-sm">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-          <div className="flex items-center gap-2 font-semibold text-white"><Info className="h-5 w-5 text-indigo-400" />Waterfall SDLC 瀑布周期里程碑及单据规范：</div>
-          <div className="text-muted-foreground">任务可按树级拆分，每个开发阶段推荐关联标准产出单据记录，例如需求说明书、WBS 拆解表、详细设计文档、发版记录等。</div>
-          <div className="ml-auto flex items-center gap-4 text-xs text-muted-foreground"><span>图例:</span><span className="inline-flex items-center gap-1"><i className="h-3 w-3 rounded bg-sky-500/20 ring-1 ring-sky-500/40" />周末（双休）</span><span className="inline-flex items-center gap-1"><i className="h-3 w-3 rounded bg-rose-500/25 ring-1 ring-rose-500/40" />法定节假日</span><span className="inline-flex items-center gap-1"><i className="h-3 w-3 rounded bg-amber-500/25 ring-1 ring-amber-500/40" />调休上班</span></div>
+      <div className="flex items-center justify-between rounded-lg border border-border bg-card/70 px-4 py-1.5 text-xs shadow-sm">
+        <div className="flex items-center gap-1.5 font-semibold text-slate-900 dark:text-white">
+          <Info className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
+          <span>图例:</span>
+        </div>
+        <div className="flex items-center gap-4 text-xs text-muted-foreground font-medium">
+          <span className="inline-flex items-center gap-1.5"><i className="h-3 w-3 rounded bg-sky-500/20 ring-1 ring-sky-500/40 dark:bg-sky-500/35" />周末（双休）</span>
+          <span className="inline-flex items-center gap-1.5"><i className="h-3 w-3 rounded bg-rose-500/25 ring-1 ring-rose-500/40 dark:bg-rose-500/35" />法定节假日</span>
+          <span className="inline-flex items-center gap-1.5"><i className="h-3 w-3 rounded bg-amber-500/25 ring-1 ring-amber-500/40 dark:bg-amber-500/35" />调休上班</span>
         </div>
       </div>
 

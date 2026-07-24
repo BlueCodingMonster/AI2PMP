@@ -531,7 +531,7 @@ export default function DashboardLayoutClient({
         </header>
 
         {/* 页面内容 */}
-        <main className="flex-1 overflow-y-auto p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto p-3 lg:p-4.5">{children}</main>
       </div>
     </div>
   );
