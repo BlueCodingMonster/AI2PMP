@@ -213,7 +213,7 @@ export default function WorkCalendarManager({
       {/* 左侧已维护日历列表 */}
       <div className="lg:col-span-1 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-white">已维护日历列表</h2>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-white">已维护日历列表</h2>
           <button
             onClick={handleNewCalendar}
             className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-xs font-semibold text-white shadow-sm hover:bg-indigo-500 transition"
@@ -237,28 +237,28 @@ export default function WorkCalendarManager({
                   onClick={() => handleSelectCalendar(calendar)}
                   className={`group relative flex flex-col justify-between rounded-xl border p-4 cursor-pointer transition ${
                     active
-                      ? "border-indigo-500 bg-indigo-500/10 shadow-lg shadow-indigo-500/5"
+                      ? "border-indigo-500/80 bg-indigo-500/10 shadow-lg shadow-indigo-500/5"
                       : "border-border bg-card hover:border-muted hover:bg-accent/40"
                   }`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="text-lg font-bold text-white">
+                        <span className="text-lg font-bold text-slate-900 dark:text-white">
                           {calendar.year} 年
                         </span>
                         <span
-                          className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                          className={`inline-flex rounded px-2 py-0.5 text-xs font-semibold ${
                             calendar.status === "PUBLISHED"
-                              ? "bg-emerald-500/10 text-emerald-300 border border-emerald-500/20"
-                              : "bg-amber-500/10 text-amber-300 border border-amber-500/20"
+                              ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                              : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
                           }`}
                         >
                           {calendar.status === "PUBLISHED" ? "已发布" : "草稿"}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <CalendarDays className="h-3.5 w-3.5 text-sky-400" />
+                        <CalendarDays className="h-3.5 w-3.5 text-sky-500 dark:text-sky-400" />
                         <span>全局工作日历</span>
                       </div>
                     </div>
@@ -283,7 +283,7 @@ export default function WorkCalendarManager({
       <div className="lg:col-span-2 space-y-4">
         <div className="rounded-xl border border-border bg-card shadow-xl">
           <div className="border-b border-border px-5 py-4">
-            <h3 className="text-lg font-semibold text-white">
+            <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
               {selectedCalendarId ? `编辑日历 - ${form.year} 年` : "新建工作日历"}
             </h3>
           </div>
