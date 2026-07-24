@@ -897,7 +897,7 @@ export default function TaskGridView({
   };
 
   return (
-    <div className="h-[calc(100vh-290px)] min-h-[400px] overflow-auto rounded-xl border border-border bg-card shadow-2xl">
+    <div className="h-[calc(100vh-179px)] min-h-[450px] overflow-auto rounded-xl border border-border bg-card shadow-2xl">
       <div className="w-full min-w-full">
         {/* 表格头（粘性顶置） */}
         <div className="sticky top-0 z-20 flex border-b border-border bg-card font-semibold text-xs text-muted-foreground select-none">

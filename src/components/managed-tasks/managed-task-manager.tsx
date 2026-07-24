@@ -625,7 +625,7 @@ function TimelineBoard({
 
   return (
     <div 
-      className="h-[calc(100vh-290px)] min-h-[400px] overflow-auto rounded-xl border border-border bg-card shadow-xl shadow-black/10"
+      className="h-[calc(100vh-179px)] min-h-[450px] overflow-auto rounded-xl border border-border bg-card shadow-xl shadow-black/10"
       onScroll={() => setHoveredBar(null)}
     >
       <div className="w-full min-w-[1000px]">
