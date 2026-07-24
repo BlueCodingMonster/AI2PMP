@@ -656,6 +656,19 @@ export async function deleteOrCancelManagedTask(id: string) {
   }
 }
 
+export async function clearAllManagedTasks() {
+  try {
+    await prisma.managedTaskStatusLog.deleteMany({});
+    const { count } = await prisma.managedTask.deleteMany({});
+    await recordAuditLog("DELETE", "WBS", `清空了系统中的全部 WBS 任务数据，共 ${count} 条记录`);
+    revalidatePath("/managed-tasks");
+    return { success: true, count };
+  } catch (error) {
+    console.error("[clearAllManagedTasks]", error);
+    return { success: false, error: error instanceof Error ? error.message : "清空任务失败" };
+  }
+}
+
 function defaultDayType(date: Date) {
   const day = date.getDay();
   return day === 0 || day === 6 ? WorkCalendarDayType.REGULAR_WEEKEND : WorkCalendarDayType.REGULAR_WORKDAY;
