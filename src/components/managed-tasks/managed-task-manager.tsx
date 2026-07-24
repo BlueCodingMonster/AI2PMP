@@ -648,13 +648,13 @@ function TimelineBoard({
               let bgClass = "text-card-foreground";
               let labelChar = "";
               if (isHoliday) {
-                bgClass = "bg-rose-500/25 text-rose-200 border-r border-rose-500/10";
+                bgClass = "bg-rose-500/15 dark:bg-rose-500/25 text-rose-700 dark:text-rose-200 border-r border-rose-500/20 dark:border-rose-500/10";
                 labelChar = "休";
               } else if (isWeekend) {
-                bgClass = "bg-sky-500/20 text-sky-200 border-r border-sky-500/10";
+                bgClass = "bg-blue-500/10 dark:bg-sky-500/20 text-blue-700 dark:text-sky-200 border-r border-blue-500/15 dark:border-sky-500/10";
                 labelChar = "末";
               } else if (isAdjustedWork) {
-                bgClass = "bg-amber-500/25 text-amber-200 border-r border-amber-500/10";
+                bgClass = "bg-amber-500/15 dark:bg-amber-500/25 text-amber-800 dark:text-amber-200 border-r border-amber-500/20 dark:border-amber-500/10";
                 labelChar = "班";
               }
 

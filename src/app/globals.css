@@ -53,49 +53,49 @@
 
 /* ===== 浅色主题变量 (.light) ===== */
 .light {
-  /* 背景色 - 冰爽优雅亮白/浅淡蓝灰 */
-  --background: oklch(0.985 0.005 260);
-  --foreground: oklch(0.18 0.02 260);
+  /* 背景色 - Apple 极简浅灰 Canvas (#F5F5F7) */
+  --background: oklch(0.972 0.005 240);
+  --foreground: oklch(0.18 0.01 250);
 
-  /* 主色调 - 靛蓝/紫宝蓝 */
-  --primary: oklch(0.52 0.22 270);
-  --primary-hover: oklch(0.46 0.22 270);
-  --primary-foreground: oklch(0.99 0 0);
+  /* 主色调 - Apple System Blue (#007AFF) */
+  --primary: oklch(0.54 0.22 250);
+  --primary-hover: oklch(0.48 0.22 250);
+  --primary-foreground: oklch(1 0 0);
 
-  /* 卡片 */
+  /* 卡片 - 纯白容器 (#FFFFFF) */
   --card: oklch(1 0 0);
-  --card-foreground: oklch(0.20 0.02 260);
+  --card-foreground: oklch(0.18 0.01 250);
 
-  /* 静音色 */
-  --muted: oklch(0.955 0.008 260);
-  --muted-foreground: oklch(0.45 0.015 260);
+  /* 静音色 - Apple System Fill (#F2F2F7) / 次要字 (#6E6E73) */
+  --muted: oklch(0.96 0.005 240);
+  --muted-foreground: oklch(0.48 0.015 250);
 
-  /* 强调色 */
-  --accent: oklch(0.94 0.03 270);
-  --accent-foreground: oklch(0.25 0.03 270);
+  /* 强调色 - 浅蓝淡彩 (#E8F2FF) / 激活深蓝 (#0066CC) */
+  --accent: oklch(0.95 0.02 250);
+  --accent-foreground: oklch(0.48 0.22 250);
 
-  /* 边框 */
-  --border: oklch(0.91 0.01 260);
-  --border-hover: oklch(0.80 0.03 270);
+  /* 边框 - Apple 浅灰边框 (#E5E5EA) */
+  --border: oklch(0.92 0.005 240);
+  --border-hover: oklch(0.82 0.02 250);
 
   /* 输入框 */
-  --input: oklch(0.99 0 0);
-  --input-focus: oklch(0.52 0.22 270);
+  --input: oklch(1 0 0);
+  --input-focus: oklch(0.54 0.22 250);
 
-  /* 危险色 */
-  --destructive: oklch(0.58 0.2 25);
-  --destructive-foreground: oklch(0.98 0 0);
+  /* 危险色 - Apple Red (#FF3B30) */
+  --destructive: oklch(0.60 0.22 20);
+  --destructive-foreground: oklch(0.99 0 0);
 
-  /* 成功色 */
-  --success: oklch(0.55 0.18 145);
+  /* 成功色 - Apple Green (#34C759) */
+  --success: oklch(0.62 0.19 145);
 
-  /* 警告色 */
-  --warning: oklch(0.65 0.18 75);
+  /* 警告色 - Apple Orange (#FF9500) */
+  --warning: oklch(0.68 0.20 70);
 
   /* 侧边栏 */
-  --sidebar: oklch(0.975 0.005 260);
-  --sidebar-foreground: oklch(0.30 0.02 260);
-  --sidebar-active: oklch(0.52 0.22 270);
+  --sidebar: oklch(0.965 0.005 240);
+  --sidebar-foreground: oklch(0.25 0.01 250);
+  --sidebar-active: oklch(0.54 0.22 250);
 }
 
 /* ===== 浅色模式全局色彩适配与图标/字体对比度增强 ===== */
@@ -103,90 +103,34 @@
   color-scheme: light;
 }
 
-/* 浅色模式下硬编码标题与纯白文字防护，避免白底白字 */
-.light h1:not([class*="text-indigo"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
-.light h2:not([class*="text-indigo"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
-.light h3:not([class*="text-indigo"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+/* 浅色模式下硬编码标题防护 */
+.light h1:not([class*="text-indigo"]):not([class*="text-blue"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h2:not([class*="text-indigo"]):not([class*="text-blue"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
+.light h3:not([class*="text-indigo"]):not([class*="text-blue"]):not([class*="text-purple"]):not([class*="text-cyan"]):not([class*="text-emerald"]):not([class*="text-amber"]):not([class*="text-rose"]),
 .light h4,
 .light h5,
 .light h6 {
   color: var(--foreground);
 }
 
-/* 浅色模式下通用卡片与标题项内 text-white 智能转为高对比度文字（排除按钮、链接及实色/渐变容器） */
-.light .bg-card .text-white:not(button):not(button *):not(a):not(a *),
-.light .bg-background .text-white:not(button):not(button *):not(a):not(a *),
-.light td .text-white:not(button):not(button *):not(a):not(a *),
-.light th .text-white:not(button):not(button *):not(a):not(a *),
-.light li .text-white:not(button):not(button *):not(a):not(a *),
-.light label.text-white {
-  color: var(--foreground);
-}
-
-/* 浅色模式下所有实色与渐变按钮/链接内部文字强制保持纯白 */
-.btn-white-text,
-.btn-white-text *,
-.light .btn-white-text,
-.light .btn-white-text *,
-.light button[class*="bg-indigo-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light button[class*="bg-emerald-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light button[class*="bg-purple-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light button[class*="bg-rose-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light button[class*="bg-blue-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light button[class*="bg-amber-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light button[class*="bg-primary"],
-.light button[class*="bg-gradient-"],
-.light a[class*="bg-indigo-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light a[class*="bg-emerald-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light a[class*="bg-purple-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]),
-.light a[class*="bg-gradient-"] {
-  color: #ffffff !important;
-}
-
-.light button[class*="bg-indigo-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light button[class*="bg-emerald-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light button[class*="bg-purple-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light button[class*="bg-rose-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light button[class*="bg-blue-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light button[class*="bg-amber-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light button[class*="bg-primary"] *,
-.light button[class*="bg-gradient-"] *,
-.light a[class*="bg-indigo-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light a[class*="bg-emerald-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light a[class*="bg-purple-"]:not([class*="/10"]):not([class*="/20"]):not([class*="/5"]) *,
-.light a[class*="bg-gradient-"] * {
-  color: #ffffff !important;
-}
-
-/* 浅色模式下图标与鲜艳亮色字体对比度加深，防浅灰白化 */
-.light .text-indigo-400 { color: oklch(0.48 0.22 270) !important; }
-.light .text-purple-400 { color: oklch(0.48 0.22 300) !important; }
-.light .text-cyan-400 { color: oklch(0.45 0.18 210) !important; }
-.light .text-teal-400 { color: oklch(0.45 0.16 180) !important; }
-.light .text-emerald-400 { color: oklch(0.45 0.18 150) !important; }
-.light .text-amber-400 { color: oklch(0.48 0.18 70) !important; }
-.light .text-rose-400 { color: oklch(0.48 0.20 15) !important; }
-
 /* 浅色模式下数据表格 th 表头柔和浅灰阶背景 */
 .light table thead,
 .light table thead tr,
 .light table th {
-  background-color: oklch(0.965 0.008 260) !important;
-  color: oklch(0.35 0.04 260) !important;
+  background-color: oklch(0.965 0.005 240) !important;
+  color: oklch(0.35 0.02 250) !important;
 }
-.light .text-blue-400 { color: oklch(0.45 0.20 250) !important; }
-.light .text-sky-400 { color: oklch(0.45 0.18 230) !important; }
 
-/* 浅色模式下半透明白色背景（如图标底层）智能转为柔和浅色底纹 */
+/* 浅色模式下半透明底纹自适应 */
 .light .bg-white\/5,
 .light .bg-white\/10,
 .light .bg-white\/\[0\.02\],
+.light .bg-white\/\[0\.025\],
 .light .bg-white\/\[0\.03\],
 .light .bg-white\/\[0\.05\],
 .light .bg-black\/10,
-.light .bg-black\/20,
-.light .bg-black\/40 {
-  background-color: var(--muted);
+.light .bg-black\/20 {
+  background-color: oklch(0.96 0.005 240 / 0.7);
 }
 
 .light .border-white\/5,

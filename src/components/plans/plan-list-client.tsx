@@ -176,8 +176,8 @@ export default function PlanListClient({
       </div>
     </div>
     <div className="flex gap-2 border-b border-border">
-      <Link href="/plans?tab=quarterly" className={`px-4 py-3 text-sm ${quarterly ? "border-b-2 border-indigo-500 text-white" : "text-muted-foreground"}`}>季度里程碑计划</Link>
-      <Link href="/plans?tab=monthly" className={`px-4 py-3 text-sm ${!quarterly ? "border-b-2 border-indigo-500 text-white" : "text-muted-foreground"}`}>月度项目经营计划</Link>
+      <Link href="/plans?tab=quarterly" className={`px-4 py-3 text-sm font-medium transition-colors ${quarterly ? "border-b-2 border-primary text-primary font-semibold" : "text-muted-foreground hover:text-foreground"}`}>季度里程碑计划</Link>
+      <Link href="/plans?tab=monthly" className={`px-4 py-3 text-sm font-medium transition-colors ${!quarterly ? "border-b-2 border-primary text-primary font-semibold" : "text-muted-foreground hover:text-foreground"}`}>月度项目经营计划</Link>
     </div>
     <form onSubmit={handleFilterSubmit} className={`glass grid gap-3 rounded-xl p-4 ${quarterly ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
       <input type="hidden" name="tab" value={tab} />
