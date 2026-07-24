@@ -42,6 +42,7 @@ export default async function ManagedTasksPage() {
   return (
     <ManagedTaskManager
       isDeptManager={isDeptManager}
+      currentUserTeamIds={myTeamIds}
       context={filteredContext}
       tasks={tasks.map((task) => ({
         id: task.id,
@@ -78,6 +79,7 @@ export default async function ManagedTasksPage() {
         year: calendar.year,
         status: calendar.status,
         standardHours: calendar.standardHours,
+        workWindows: calendar.workWindows,
         days: calendar.days.map((day) => {
           const y = day.date.getUTCFullYear();
           const m = String(day.date.getUTCMonth() + 1).padStart(2, "0");
@@ -86,6 +88,7 @@ export default async function ManagedTasksPage() {
             date: `${y}-${m}-${d}`,
             type: day.type,
             standardHours: day.standardHours,
+            workWindows: day.workWindows,
             label: day.label,
             notes: day.notes,
           };

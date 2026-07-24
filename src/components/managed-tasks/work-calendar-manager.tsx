@@ -16,10 +16,12 @@ type CalendarItem = {
   year: number;
   status: string;
   standardHours: number;
+  workWindows: string | null;
   days: Array<{
     date: string;
     type: string;
     standardHours: number | null;
+    workWindows: string | null;
     label: string | null;
     notes: string | null;
   }>;
@@ -44,10 +46,31 @@ const initialCalendar = {
   year: new Date().getFullYear(),
   status: "DRAFT",
   standardHours: 8,
+  workWindows: `[
+  {
+    "name": "冬季作息 (10.01 - 04.30)",
+    "startMMDD": "10-01",
+    "endMMDD": "04-30",
+    "windows": [
+      { "start": "08:00", "end": "12:00" },
+      { "start": "13:00", "end": "17:00" }
+    ]
+  },
+  {
+    "name": "夏季作息 (05.01 - 09.30)",
+    "startMMDD": "05-01",
+    "endMMDD": "09-30",
+    "windows": [
+      { "start": "08:00", "end": "12:00" },
+      { "start": "13:30", "end": "17:30" }
+    ]
+  }
+]`,
   days: [] as Array<{
     date: string;
     type: string;
     standardHours: number | "";
+    workWindows: string;
     label: string;
     notes: string;
   }>,
@@ -76,10 +99,12 @@ export default function WorkCalendarManager({
       year: calendar.year,
       status: calendar.status,
       standardHours: calendar.standardHours,
+      workWindows: calendar.workWindows || "",
       days: calendar.days.map((day) => ({
         date: day.date.slice(0, 10),
         type: day.type,
         standardHours: day.standardHours ?? "",
+        workWindows: day.workWindows || "",
         label: day.label || "",
         notes: day.notes || "",
       })),
@@ -104,6 +129,27 @@ export default function WorkCalendarManager({
         setError("年份必须在 2020 到 2100 之间");
         return;
       }
+
+      // Validate JSON formatting
+      if (form.workWindows) {
+        try {
+          JSON.parse(form.workWindows);
+        } catch (e) {
+          setError("标准工作窗口配置 JSON 格式不合法，请检查标点或括号");
+          return;
+        }
+      }
+
+      for (const day of form.days) {
+        if (day.workWindows) {
+          try {
+            JSON.parse(day.workWindows);
+          } catch (e) {
+            setError(`日期 ${day.date} 的工作窗口 JSON 格式不合法`);
+            return;
+          }
+        }
+      }
       
       const payload = {
         ...form,
@@ -112,6 +158,7 @@ export default function WorkCalendarManager({
           date: day.date,
           type: day.type,
           standardHours: day.standardHours === "" ? null : Number(day.standardHours),
+          workWindows: day.workWindows || null,
           label: day.label || null,
           notes: day.notes || null,
         })),
@@ -125,23 +172,24 @@ export default function WorkCalendarManager({
 
       setSuccess("工作日历保存成功！");
       
-      // Update calendars list locally
       const saved = result.data as {
         id: string;
         year: number;
         status: string;
-        // productLineTeamId is always null for global calendars
         standardHours: number;
+        workWindows: string | null;
       };
       const updatedItem: CalendarItem = {
         id: saved.id,
         year: saved.year,
         status: saved.status,
         standardHours: saved.standardHours,
+        workWindows: saved.workWindows,
         days: form.days.map((day) => ({
           date: day.date,
           type: day.type,
           standardHours: day.standardHours === "" ? null : Number(day.standardHours),
+          workWindows: day.workWindows || null,
           label: day.label || null,
           notes: day.notes || null,
         })),
@@ -299,11 +347,30 @@ export default function WorkCalendarManager({
               </label>
             </div>
 
+            <label className="block space-y-1.5 text-xs text-muted-foreground">
+              年度默认工作时段与时令规则配置 (JSON 格式)
+              <textarea
+                value={form.workWindows}
+                onChange={(e) =>
+                  setForm((current) => ({
+                    ...current,
+                    workWindows: e.target.value,
+                  }))
+                }
+                rows={8}
+                className="w-full rounded-lg border border-border bg-input px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-indigo-500"
+                placeholder="请输入 JSON 作息配置"
+              />
+              <span className="text-[10px] text-muted-foreground block mt-0.5">
+                支持配置静态数组窗口或多时令范围窗口。例如：五一前后作息调整，或常规作息规则。格式必须为 valid JSON。
+              </span>
+            </label>
+
             {/* 例外日期管理 */}
             <div className="space-y-3">
               <div className="flex items-center justify-between border-t border-border/40 pt-4">
                 <span className="text-xs font-semibold text-muted-foreground">
-                  例外日期设置 (节假日、调休安排)
+                  例外日期设置 (节假日、调休与作息覆写安排)
                 </span>
                 <button
                   onClick={() =>
@@ -315,6 +382,7 @@ export default function WorkCalendarManager({
                           date: "",
                           type: "LEGAL_HOLIDAY",
                           standardHours: "",
+                          workWindows: "",
                           label: "",
                           notes: "",
                         },
@@ -328,7 +396,7 @@ export default function WorkCalendarManager({
                 </button>
               </div>
 
-              <div className="max-h-[350px] space-y-3 overflow-y-auto pr-1">
+              <div className="max-h-[350px] space-y-4 overflow-y-auto pr-1">
                 {form.days.length === 0 ? (
                   <div className="rounded-xl border border-dashed border-border/60 bg-input/20 p-8 text-center text-xs text-muted-foreground">
                     未添加例外日期。系统将自动默认按国家常规双休日（周六日休息，周一至五工作）计算。
@@ -337,66 +405,105 @@ export default function WorkCalendarManager({
                   form.days.map((day, index) => (
                     <div
                       key={index}
-                      className="grid grid-cols-[1.5fr_1.5fr_1fr_36px] gap-2 items-center bg-input/10 p-3 rounded-xl border border-border/40"
+                      className="space-y-3 bg-input/10 p-4 rounded-xl border border-border/45"
                     >
-                      <input
-                        type="date"
-                        value={day.date}
-                        onChange={(e) =>
-                          setForm((current) => ({
-                            ...current,
-                            days: current.days.map((item, i) =>
-                              i === index ? { ...item, date: e.target.value } : item
-                            ),
-                          }))
-                        }
-                        className={controlClass}
-                        required
-                      />
-                      <select
-                        value={day.type}
-                        onChange={(e) =>
-                          setForm((current) => ({
-                            ...current,
-                            days: current.days.map((item, i) =>
-                              i === index ? { ...item, type: e.target.value } : item
-                            ),
-                          }))
-                        }
-                        className={controlClass}
-                      >
-                        {dayTypes.map((type) => (
-                          <option key={type} value={type}>
-                            {dayTypeLabels[type]}
-                          </option>
-                        ))}
-                      </select>
-                      <input
-                        type="number"
-                        placeholder="工时"
-                        value={day.standardHours}
-                        onChange={(e) =>
-                          setForm((current) => ({
-                            ...current,
-                            days: current.days.map((item, i) =>
-                              i === index ? { ...item, standardHours: e.target.value === "" ? "" : Number(e.target.value) } : item
-                            ),
-                          }))
-                        }
-                        className={controlClass}
-                      />
-                      <button
-                        onClick={() =>
-                          setForm((current) => ({
-                            ...current,
-                            days: current.days.filter((_, i) => i !== index),
-                          }))
-                        }
-                        className="flex h-10 w-9 items-center justify-center rounded-lg border border-border text-red-400 hover:bg-red-500/10 hover:text-red-300 transition"
-                        title="删除此例外"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      <div className="grid grid-cols-[1.5fr_1.5fr_1fr_36px] gap-2 items-center">
+                        <input
+                          type="date"
+                          value={day.date}
+                          onChange={(e) =>
+                            setForm((current) => ({
+                              ...current,
+                              days: current.days.map((item, i) =>
+                                i === index ? { ...item, date: e.target.value } : item
+                              ),
+                            }))
+                          }
+                          className={controlClass}
+                          required
+                        />
+                        <select
+                          value={day.type}
+                          onChange={(e) =>
+                            setForm((current) => ({
+                              ...current,
+                              days: current.days.map((item, i) =>
+                                i === index ? { ...item, type: e.target.value } : item
+                              ),
+                            }))
+                          }
+                          className={controlClass}
+                        >
+                          {dayTypes.map((type) => (
+                            <option key={type} value={type}>
+                              {dayTypeLabels[type]}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          type="number"
+                          placeholder="工时"
+                          value={day.standardHours}
+                          onChange={(e) =>
+                            setForm((current) => ({
+                              ...current,
+                              days: current.days.map((item, i) =>
+                                i === index ? { ...item, standardHours: e.target.value === "" ? "" : Number(e.target.value) } : item
+                              ),
+                            }))
+                          }
+                          className={controlClass}
+                        />
+                        <button
+                          onClick={() =>
+                            setForm((current) => ({
+                              ...current,
+                              days: current.days.filter((_, i) => i !== index),
+                            }))
+                          }
+                          className="flex h-10 w-9 items-center justify-center rounded-lg border border-border text-red-400 hover:bg-red-500/10 hover:text-red-300 transition"
+                          title="删除此例外"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-xs">
+                        <label className="space-y-1.5 block text-[10px] text-muted-foreground">
+                          工作时段覆写 (JSON，可选)
+                          <input
+                            type="text"
+                            placeholder='如：[{"start":"08:00","end":"12:00"}]'
+                            value={day.workWindows || ""}
+                            onChange={(e) =>
+                              setForm((current) => ({
+                                ...current,
+                                days: current.days.map((item, i) =>
+                                  i === index ? { ...item, workWindows: e.target.value } : item
+                                ),
+                              }))
+                            }
+                            className={`${controlClass} !min-h-8 text-xs font-mono`}
+                          />
+                        </label>
+                        <label className="space-y-1.5 block text-[10px] text-muted-foreground">
+                          例外标签 / 备注说明
+                          <input
+                            type="text"
+                            placeholder="如：五一调休 / 节假日"
+                            value={day.label || day.notes || ""}
+                            onChange={(e) =>
+                              setForm((current) => ({
+                                ...current,
+                                days: current.days.map((item, i) =>
+                                  i === index ? { ...item, label: e.target.value, notes: e.target.value } : item
+                                ),
+                              }))
+                            }
+                            className={`${controlClass} !min-h-8 text-xs`}
+                          />
+                        </label>
+                      </div>
                     </div>
                   ))
                 )}

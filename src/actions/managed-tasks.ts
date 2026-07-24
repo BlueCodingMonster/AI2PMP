@@ -35,15 +35,91 @@ type SessionUser = { id: string; isAdmin: boolean };
 type TaskWithParent = Prisma.ManagedTaskGetPayload<{ include: { parent: true; children: { select: { id: true } }; productLineTeam: true } }>;
 
 const clean = (value?: string | null) => value?.trim() || null;
-const toDate = (value?: string | null) => (value ? new Date(value.includes("T") ? value : `${value}T00:00:00.000Z`) : null);
 
-async function calculateWorkdays(startDate: Date | null, endDate: Date | null, teamId: string): Promise<number> {
+const toDate = (value?: string | null, isEnd: boolean = false) => {
+  if (!value) return null;
+  // If it's already an ISO string with timezone or time
+  if (value.includes("T") || value.includes("Z")) {
+    return new Date(value);
+  }
+  // Space format like "2026-07-23 08:30"
+  if (value.includes(" ")) {
+    return new Date(value.replace(" ", "T"));
+  }
+  // Date-only string like "2026-07-23"
+  if (isEnd) {
+    return new Date(`${value}T18:00:00`);
+  } else {
+    return new Date(`${value}T08:00:00`);
+  }
+};
+
+type TimeWindow = { start: string; end: string };
+
+function parseWindows(jsonStr: string | null | undefined): TimeWindow[] | null {
+  if (!jsonStr) return null;
+  try {
+    const val = JSON.parse(jsonStr);
+    if (Array.isArray(val)) {
+      return val as TimeWindow[];
+    }
+  } catch (e) {}
+  return null;
+}
+
+type SeasonalRule = {
+  name: string;
+  startMMDD: string;
+  endMMDD: string;
+  windows: TimeWindow[];
+};
+
+function resolveWorkWindowsForDay(date: Date, calendarYear: any, calendarDay?: any): TimeWindow[] {
+  if (calendarDay && calendarDay.workWindows) {
+    const dayWindows = parseWindows(calendarDay.workWindows);
+    if (dayWindows) return dayWindows;
+  }
+
+  if (calendarYear && calendarYear.workWindows) {
+    try {
+      const config = JSON.parse(calendarYear.workWindows);
+      if (Array.isArray(config)) {
+        if (config.length > 0) {
+          if ('startMMDD' in config[0]) {
+            const mm = String(date.getMonth() + 1).padStart(2, "0");
+            const dd = String(date.getDate()).padStart(2, "0");
+            const mmdd = `${mm}-${dd}`;
+
+            for (const rule of config as SeasonalRule[]) {
+              if (rule.startMMDD > rule.endMMDD) {
+                if (mmdd >= rule.startMMDD || mmdd <= rule.endMMDD) {
+                  return rule.windows;
+                }
+              } else {
+                if (mmdd >= rule.startMMDD && mmdd <= rule.endMMDD) {
+                  return rule.windows;
+                }
+              }
+            }
+          } else {
+            return config as TimeWindow[];
+          }
+        }
+      }
+    } catch (e) {}
+  }
+
+  return [
+    { start: "08:00", end: "12:00" },
+    { start: "13:00", end: "17:00" }
+  ];
+}
+
+export async function calculateWorkdays(startDate: Date | null, endDate: Date | null, teamId: string): Promise<number> {
   if (!startDate || !endDate) return 0;
   
   const start = new Date(startDate);
-  start.setHours(0, 0, 0, 0);
   const end = new Date(endDate);
-  end.setHours(0, 0, 0, 0);
   if (start > end) return 0;
 
   const startYear = start.getFullYear();
@@ -63,56 +139,86 @@ async function calculateWorkdays(startDate: Date | null, endDate: Date | null, t
     },
     include: { days: true },
     orderBy: [
-      { status: "desc" }, // PUBLISHED before DRAFT
+      { status: "desc" },
       { updatedAt: "desc" }
     ]
   });
 
-  const overrideMap = new Map<string, string>();
+  const overrideMap = new Map<string, { type: string; workWindows: string | null; standardHours: number | null }>();
+  const yearCalendarMap = new Map<number, any>();
+
   for (const year of years) {
     const yearCals = calendars.filter((c) => c.year === year);
     const teamCal = yearCals.find((c) => c.productLineTeamId === teamId);
     const globalCal = yearCals.find((c) => c.productLineTeamId === null);
     
-    if (globalCal) {
-      globalCal.days.forEach((d) => {
+    const activeCal = teamCal || globalCal;
+    if (activeCal) {
+      yearCalendarMap.set(year, activeCal);
+      activeCal.days.forEach((d) => {
         const key = d.date.toISOString().split("T")[0];
-        overrideMap.set(key, d.type);
-      });
-    }
-    if (teamCal) {
-      teamCal.days.forEach((d) => {
-        const key = d.date.toISOString().split("T")[0];
-        overrideMap.set(key, d.type);
+        overrideMap.set(key, {
+          type: d.type,
+          workWindows: d.workWindows,
+          standardHours: d.standardHours
+        });
       });
     }
   }
 
-  let workdayCount = 0;
+  let totalMs = 0;
+  
   const current = new Date(start);
-  while (current <= end) {
-    const key = current.toISOString().split("T")[0];
+  const iterDate = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+  const iterEnd = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+  while (iterDate <= iterEnd) {
+    const year = iterDate.getFullYear();
+    const month = String(iterDate.getMonth() + 1).padStart(2, "0");
+    const dayDate = String(iterDate.getDate()).padStart(2, "0");
+    const key = `${year}-${month}-${dayDate}`;
+
     const override = overrideMap.get(key);
-    
-    if (override) {
-      if (
-        override === WorkCalendarDayType.REGULAR_WORKDAY ||
-        override === WorkCalendarDayType.ADJUSTED_WORKDAY ||
-        override === WorkCalendarDayType.SPECIAL_WORKDAY
-      ) {
-        workdayCount++;
-      }
-    } else {
-      const day = current.getDay();
-      const isWeekend = day === 0 || day === 6;
-      if (!isWeekend) {
-        workdayCount++;
+    const isWorkday = override
+      ? (override.type === WorkCalendarDayType.REGULAR_WORKDAY ||
+         override.type === WorkCalendarDayType.ADJUSTED_WORKDAY ||
+         override.type === WorkCalendarDayType.SPECIAL_WORKDAY)
+      : (iterDate.getDay() !== 0 && iterDate.getDay() !== 6);
+
+    if (isWorkday) {
+      const activeCal = yearCalendarMap.get(year);
+      const calendarDay = activeCal ? activeCal.days.find((d: any) => d.date.toISOString().split("T")[0] === key) : null;
+      const windows = resolveWorkWindowsForDay(iterDate, activeCal, calendarDay);
+      
+      for (const win of windows) {
+        const [sh, sm] = win.start.split(":").map(Number);
+        const [eh, em] = win.end.split(":").map(Number);
+
+        const winStart = new Date(iterDate);
+        winStart.setHours(sh, sm, 0, 0);
+
+        const winEnd = new Date(iterDate);
+        winEnd.setHours(eh, em, 0, 0);
+
+        const overlapStart = Math.max(start.getTime(), winStart.getTime());
+        const overlapEnd = Math.min(end.getTime(), winEnd.getTime());
+
+        if (overlapStart < overlapEnd) {
+          totalMs += overlapEnd - overlapStart;
+        }
       }
     }
-    current.setDate(current.getDate() + 1);
+
+    iterDate.setDate(iterDate.getDate() + 1);
   }
 
-  return workdayCount;
+  const defaultYearCal = yearCalendarMap.get(startYear) || yearCalendarMap.get(endYear);
+  const standardHours = defaultYearCal ? defaultYearCal.standardHours : 8;
+
+  const totalHours = totalMs / 3600000;
+  const rawWorkdays = totalHours / standardHours;
+  
+  return Math.round(rawWorkdays * 10) / 10;
 }
 
 async function calculateLeafWorkdays(
@@ -324,7 +430,7 @@ export async function getManagedTaskContext() {
       id: true,
       year: true,
       month: true,
-      productLineTeam: { select: { name: true } },
+      productLineTeam: { select: { id: true, name: true } },
       productDeliveries: { orderBy: { sortOrder: "asc" }, select: { id: true, moduleVersion: true, deliveryContent: true } },
       projectDeliveries: { orderBy: { sortOrder: "asc" }, select: { id: true, projectName: true, deliveryContent: true } },
       marketActions: { orderBy: { sortOrder: "asc" }, select: { id: true, productOrProject: true, marketAction: true } },
@@ -338,15 +444,16 @@ export async function getManagedTaskContext() {
 
   const monthlyItems = monthlyPlans.flatMap((plan) => {
     const prefix = `${plan.productLineTeam.name} / ${plan.year}-${String(plan.month).padStart(2, "0")}`;
+    const teamId = plan.productLineTeam.id;
     return [
-      ...plan.productDeliveries.map((item) => ({ planId: plan.id, itemType: "PRODUCT_DELIVERY", itemId: item.id, label: `${prefix} / 产品交付 / ${item.moduleVersion || item.deliveryContent || "未命名事项"}` })),
-      ...plan.projectDeliveries.map((item) => ({ planId: plan.id, itemType: "PROJECT_DELIVERY", itemId: item.id, label: `${prefix} / 项目交付 / ${item.projectName || item.deliveryContent || "未命名事项"}` })),
-      ...plan.marketActions.map((item) => ({ planId: plan.id, itemType: "MARKET_ACTION", itemId: item.id, label: `${prefix} / 市场动作 / ${item.productOrProject || item.marketAction || "未命名事项"}` })),
-      ...plan.costOptimizations.map((item) => ({ planId: plan.id, itemType: "COST_OPTIMIZATION", itemId: item.id, label: `${prefix} / 成本优化 / ${item.optimizationItem || item.currentProblem || "未命名事项"}` })),
-      ...plan.aiProductEnablements.map((item) => ({ planId: plan.id, itemType: "AI_PRODUCT_ENABLEMENT", itemId: item.id, label: `${prefix} / AI产品赋能 / ${item.item || item.outputResult || "未命名事项"}` })),
-      ...plan.aiEfficiencies.map((item) => ({ planId: plan.id, itemType: "AI_EFFICIENCY", itemId: item.id, label: `${prefix} / AI提效 / ${item.item || item.outputResult || "未命名事项"}` })),
-      ...plan.risks.map((item) => ({ planId: plan.id, itemType: "RISK", itemId: item.id, label: `${prefix} / 风险 / ${item.riskItem || "未命名事项"}` })),
-      ...plan.resourceRequests.map((item) => ({ planId: plan.id, itemType: "RESOURCE_REQUEST", itemId: item.id, label: `${prefix} / 资源需求 / ${item.content || "未命名事项"}` })),
+      ...plan.productDeliveries.map((item) => ({ teamId, planId: plan.id, itemType: "PRODUCT_DELIVERY", itemId: item.id, label: `${prefix} / 产品交付 / ${item.moduleVersion || item.deliveryContent || "未命名事项"}` })),
+      ...plan.projectDeliveries.map((item) => ({ teamId, planId: plan.id, itemType: "PROJECT_DELIVERY", itemId: item.id, label: `${prefix} / 项目交付 / ${item.projectName || item.deliveryContent || "未命名事项"}` })),
+      ...plan.marketActions.map((item) => ({ teamId, planId: plan.id, itemType: "MARKET_ACTION", itemId: item.id, label: `${prefix} / 市场动作 / ${item.productOrProject || item.marketAction || "未命名事项"}` })),
+      ...plan.costOptimizations.map((item) => ({ teamId, planId: plan.id, itemType: "COST_OPTIMIZATION", itemId: item.id, label: `${prefix} / 成本优化 / ${item.optimizationItem || item.currentProblem || "未命名事项"}` })),
+      ...plan.aiProductEnablements.map((item) => ({ teamId, planId: plan.id, itemType: "AI_PRODUCT_ENABLEMENT", itemId: item.id, label: `${prefix} / AI产品赋能 / ${item.item || item.outputResult || "未命名事项"}` })),
+      ...plan.aiEfficiencies.map((item) => ({ teamId, planId: plan.id, itemType: "AI_EFFICIENCY", itemId: item.id, label: `${prefix} / AI提效 / ${item.item || item.outputResult || "未命名事项"}` })),
+      ...plan.risks.map((item) => ({ teamId, planId: plan.id, itemType: "RISK", itemId: item.id, label: `${prefix} / 风险 / ${item.riskItem || "未命名事项"}` })),
+      ...plan.resourceRequests.map((item) => ({ teamId, planId: plan.id, itemType: "RESOURCE_REQUEST", itemId: item.id, label: `${prefix} / 资源需求 / ${item.content || "未命名事项"}` })),
     ];
   });
 
@@ -420,6 +527,7 @@ export async function createManagedTask(input: ManagedTaskInput) {
         parentId: parent?.id ?? null,
         createdById: user.id,
       },
+      include: taskInclude,
     });
     await recordAuditLog("CREATE", "WBS", `创建了 WBS 任务：${task.title}`);
     if (parent) {
@@ -563,15 +671,16 @@ export async function saveWorkCalendar(input: WorkCalendarInput) {
     const existing = await prisma.workCalendarYear.findFirst({ where: { year: data.year, productLineTeamId: null }, select: { id: true } });
     const calendar = await prisma.$transaction(async (tx) => {
       const saved = existing
-        ? await tx.workCalendarYear.update({ where: { id: existing.id }, data: { status: data.status, standardHours: data.standardHours, publishedAt: data.status === WorkCalendarStatus.PUBLISHED ? new Date() : null } })
-        : await tx.workCalendarYear.create({ data: { year: data.year, productLineTeamId: null, status: data.status, standardHours: data.standardHours, publishedAt: data.status === WorkCalendarStatus.PUBLISHED ? new Date() : null } });
+        ? await tx.workCalendarYear.update({ where: { id: existing.id }, data: { status: data.status, standardHours: data.standardHours, workWindows: data.workWindows || null, publishedAt: data.status === WorkCalendarStatus.PUBLISHED ? new Date() : null } })
+        : await tx.workCalendarYear.create({ data: { year: data.year, productLineTeamId: null, status: data.status, standardHours: data.standardHours, workWindows: data.workWindows || null, publishedAt: data.status === WorkCalendarStatus.PUBLISHED ? new Date() : null } });
       await tx.workCalendarDay.deleteMany({ where: { calendarYearId: saved.id } });
       const exceptionDays = data.days.filter(
         (day) =>
           day.type === WorkCalendarDayType.LEGAL_HOLIDAY ||
           day.type === WorkCalendarDayType.ADJUSTED_WORKDAY ||
           day.type === WorkCalendarDayType.SPECIAL_REST_DAY ||
-          day.type === WorkCalendarDayType.SPECIAL_WORKDAY
+          day.type === WorkCalendarDayType.SPECIAL_WORKDAY ||
+          day.workWindows
       );
       await tx.workCalendarDay.createMany({
         data: exceptionDays.map((day) => ({
@@ -579,6 +688,7 @@ export async function saveWorkCalendar(input: WorkCalendarInput) {
           date: new Date(`${day.date}T00:00:00.000Z`),
           type: day.type,
           standardHours: day.standardHours ?? null,
+          workWindows: day.workWindows || null,
           label: clean(day.label),
           notes: clean(day.notes),
         })),

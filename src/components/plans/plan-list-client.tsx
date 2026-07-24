@@ -4,7 +4,7 @@ import Link from "next/link";
 import { CalendarRange, Eye, Pencil, Plus, ArrowDownToLine, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { planPublicationStatusLabels } from "@/lib/plans/dictionaries";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { deleteQuarterlyPlan } from "@/actions/quarterly-plans";
 import { deleteMonthlyPlan } from "@/actions/monthly-plans";
@@ -41,6 +41,39 @@ export default function PlanListClient({
 }) {
   const quarterly = tab === "quarterly";
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
+  const handleFilterSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const formData = new FormData(e.currentTarget);
+    const params = new URLSearchParams();
+    params.set("tab", tab);
+
+    if (quarterly) {
+      const year = formData.get("year");
+      const period = formData.get("period");
+      if (year) params.set("year", String(year).trim());
+      if (period) params.set("period", String(period).trim());
+    } else {
+      const yearMonth = formData.get("yearMonth");
+      if (yearMonth) {
+        const [y, m] = String(yearMonth).split("-");
+        if (y) params.set("year", y);
+        if (m) params.set("period", String(parseInt(m, 10)));
+      }
+    }
+
+    if (selectedTeamIds.length > 0) {
+      params.set("productLineTeamId", selectedTeamIds.join(","));
+    }
+
+    const status = formData.get("status");
+    if (status) params.set("status", String(status).trim());
+
+    startTransition(() => {
+      router.push(`/plans?${params.toString()}`);
+    });
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm("确定要删除该计划吗？删除后将不可恢复。")) return;
@@ -146,7 +179,7 @@ export default function PlanListClient({
       <Link href="/plans?tab=quarterly" className={`px-4 py-3 text-sm ${quarterly ? "border-b-2 border-indigo-500 text-white" : "text-muted-foreground"}`}>季度里程碑计划</Link>
       <Link href="/plans?tab=monthly" className={`px-4 py-3 text-sm ${!quarterly ? "border-b-2 border-indigo-500 text-white" : "text-muted-foreground"}`}>月度项目经营计划</Link>
     </div>
-    <form className={`glass grid gap-3 rounded-xl p-4 ${quarterly ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
+    <form onSubmit={handleFilterSubmit} className={`glass grid gap-3 rounded-xl p-4 ${quarterly ? "md:grid-cols-5" : "md:grid-cols-4"}`}>
       <input type="hidden" name="tab" value={tab} />
       
       {quarterly ? (
@@ -182,7 +215,7 @@ export default function PlanListClient({
         <option value="DRAFT">草稿</option>
         <option value="PUBLISHED">已发布</option>
       </select>
-      <button className="rounded-lg border border-indigo-500/30 px-3 py-2 text-sm text-indigo-300">筛选</button>
+      <button disabled={isPending} className="rounded-lg border border-indigo-500/30 px-3 py-2 text-sm text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-50">筛选</button>
     </form>
     <div className="overflow-x-auto rounded-xl border border-border"><table className="w-full min-w-[1000px] text-left text-sm"><thead className="bg-white/5 text-xs text-muted-foreground"><tr><th className="px-4 py-3">周期</th><th className="px-4 py-3">产品线小组</th><th className="px-4 py-3">组长</th><th className="px-4 py-3">{quarterly ? "目标/风险" : "事项总数"}</th>{!quarterly && <><th className="px-4 py-3">风险</th><th className="px-4 py-3">资源需求</th></>}<th className="px-4 py-3">状态</th><th className="px-4 py-3">发布时间</th><th className="px-4 py-3">最后修改</th><th className="px-4 py-3">操作</th></tr></thead>
       <tbody>{plans.length === 0 ? <tr><td colSpan={quarterly ? 8 : 10} className="px-4 py-12 text-center text-muted-foreground">暂无计划</td></tr> : plans.map((plan) => {

@@ -81,14 +81,35 @@ async function main() {
     select: { id: true },
   });
   
+  const defaultWindows = JSON.stringify([
+    {
+      name: "冬季作息 (10.01 - 04.30)",
+      startMMDD: "10-01",
+      endMMDD: "04-30",
+      windows: [
+        { start: "08:00", end: "12:00" },
+        { start: "13:00", end: "17:00" }
+      ]
+    },
+    {
+      name: "夏季作息 (05.01 - 09.30)",
+      startMMDD: "05-01",
+      endMMDD: "09-30",
+      windows: [
+        { start: "08:00", end: "12:00" },
+        { start: "13:30", end: "17:30" }
+      ]
+    }
+  ], null, 2);
+
   await prisma.$transaction(async (tx) => {
     const saved = existing
       ? await tx.workCalendarYear.update({
           where: { id: existing.id },
-          data: { status: WorkCalendarStatus.PUBLISHED, standardHours: 8, publishedAt: new Date() },
+          data: { status: WorkCalendarStatus.PUBLISHED, standardHours: 8, workWindows: defaultWindows, publishedAt: new Date() },
         })
       : await tx.workCalendarYear.create({
-          data: { year, productLineTeamId: null, status: WorkCalendarStatus.PUBLISHED, standardHours: 8, publishedAt: new Date() },
+          data: { year, productLineTeamId: null, status: WorkCalendarStatus.PUBLISHED, standardHours: 8, workWindows: defaultWindows, publishedAt: new Date() },
         });
         
     await tx.workCalendarDay.deleteMany({ where: { calendarYearId: saved.id } });

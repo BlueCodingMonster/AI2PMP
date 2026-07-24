@@ -11,11 +11,13 @@ import {
   Layers3,
   Plus,
   Search,
+  Table2,
   Trash2,
   UserRound,
   UsersRound,
   X,
 } from "lucide-react";
+import TaskGridView from "./task-grid-view";
 import {
   createManagedTask,
   deleteOrCancelManagedTask,
@@ -25,7 +27,7 @@ import {
 
 type IdName = { id: string; name: string };
 type VersionOption = { id: string; label: string };
-type MonthlyItem = { planId: string; itemType: string; itemId: string; label: string };
+type MonthlyItem = { teamId?: string; planId: string; itemType: string; itemId: string; label: string };
 type TaskItem = {
   id: string;
   sequenceNo: number;
@@ -69,7 +71,7 @@ type Context = {
   versions: { products: VersionOption[]; projects: VersionOption[] };
   monthlyItems: MonthlyItem[];
 };
-type ViewMode = "wbs" | "person";
+type ViewMode = "wbs" | "person" | "grid";
 type TimelineRow = { 
   id: string; 
   kind: "group" | "task"; 
@@ -146,6 +148,118 @@ const initialCalendar = {
 };
 
 const controlClass = "min-h-10 rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground outline-none focus:border-indigo-500";
+
+// 弹窗用 Autocomplete 执行人选择器（本组优先 + 打字搜索）
+function ModalExecutorPicker({
+  value,
+  displayName,
+  users,
+  teamMemberIds,
+  controlClass: cls,
+  onChange,
+}: {
+  value: string;
+  displayName: string;
+  users: Array<{ id: string; name: string }>;
+  teamMemberIds: Set<string>;
+  controlClass: string;
+  onChange: (userId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setSearch("");
+      }
+    }
+    if (open) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [open]);
+
+  const q = search.trim().toLowerCase();
+  const filtered = q ? users.filter((u) => u.name.toLowerCase().includes(q)) : users;
+  const teamUsers = filtered.filter((u) => teamMemberIds.has(u.id));
+  const otherUsers = filtered.filter((u) => !teamMemberIds.has(u.id));
+
+  const handleSelect = (userId: string) => {
+    onChange(userId);
+    setOpen(false);
+    setSearch("");
+  };
+
+  return (
+    <div ref={containerRef} className="relative w-full">
+      <input
+        value={open ? search : displayName}
+        placeholder="未分配"
+        onChange={(e) => setSearch(e.target.value)}
+        onFocus={() => { setOpen(true); setSearch(""); }}
+        className={`${cls} w-full cursor-pointer`}
+      />
+      {open && (
+        <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-border bg-card shadow-2xl">
+          <button
+            type="button"
+            onMouseDown={(e) => e.preventDefault()}
+            onClick={() => handleSelect("")}
+            className="w-full px-3 py-2 text-left text-sm text-muted-foreground hover:bg-indigo-500/10 transition"
+          >
+            -- 未分配 --
+          </button>
+          {teamUsers.length > 0 && (
+            <>
+              <div className="px-3 py-1.5 text-[11px] font-semibold text-indigo-400 bg-indigo-500/5 select-none">
+                ★ 本组成员
+              </div>
+              {teamUsers.map((u) => (
+                <button
+                  type="button"
+                  key={u.id}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleSelect(u.id)}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-indigo-500/10 transition flex items-center gap-1.5 ${
+                    u.id === value ? "bg-indigo-500/15 text-indigo-400 font-semibold" : "text-foreground"
+                  }`}
+                >
+                  <span className="text-indigo-400">★</span> {u.name}
+                </button>
+              ))}
+            </>
+          )}
+          {otherUsers.length > 0 && (
+            <>
+              <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground/60 bg-white/[0.02] select-none">
+                其他人员
+              </div>
+              {otherUsers.map((u) => (
+                <button
+                  type="button"
+                  key={u.id}
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => handleSelect(u.id)}
+                  className={`w-full px-3 py-2 text-left text-sm hover:bg-white/[0.06] transition ${
+                    u.id === value ? "bg-indigo-500/10 text-indigo-400 font-semibold" : "text-foreground"
+                  }`}
+                >
+                  👤 {u.name}
+                </button>
+              ))}
+            </>
+          )}
+          {teamUsers.length === 0 && otherUsers.length === 0 && (
+            <div className="px-3 py-3 text-sm text-muted-foreground/50 text-center">无匹配人员</div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function shortDate(value: string | null) {
   return value ? value.slice(0, 10) : "-";
@@ -408,19 +522,44 @@ function buildGroupedRows(tasks: TaskItem[], mode: Exclude<ViewMode, "wbs">, pos
   return rows;
 }
 
-function barGeometry(task: TaskItem, days: Date[]) {
+function getTimelineRange(scale: "day" | "week" | "month" | "quarter", days: Date[]) {
+  const rangeStart = new Date(days[0]);
+  rangeStart.setHours(0, 0, 0, 0); // start of the first column
+  
+  const rangeEnd = new Date(days[days.length - 1]);
+  if (scale === "day") {
+    rangeEnd.setHours(23, 59, 59, 999);
+  } else if (scale === "quarter") {
+    const year = rangeEnd.getFullYear();
+    const month = rangeEnd.getMonth();
+    const lastDayOfMonth = new Date(year, month + 1, 0);
+    rangeEnd.setDate(lastDayOfMonth.getDate());
+    rangeEnd.setHours(23, 59, 59, 999);
+  } else {
+    rangeEnd.setHours(23, 59, 59, 999);
+  }
+  
+  return { start: rangeStart, end: rangeEnd };
+}
+
+function barGeometry(task: TaskItem, days: Date[], scale: "day" | "week" | "month" | "quarter" = "month") {
   if (!task.planStartDate || !task.planEndDate) return null;
   const start = new Date(task.planStartDate);
   const end = new Date(task.planEndDate);
-  const rangeStart = days[0];
-  const rangeEnd = days[days.length - 1];
-  if (end < rangeStart || start > rangeEnd) return null;
-  const visibleStart = start < rangeStart ? rangeStart : start;
-  const visibleEnd = end > rangeEnd ? rangeEnd : end;
-  const startIdx = Math.max(0, Math.floor((visibleStart.getTime() - rangeStart.getTime()) / 86400000));
-  const spanDays = Math.floor((visibleEnd.getTime() - visibleStart.getTime()) / 86400000) + 1;
-  const left = (startIdx / days.length) * 100;
-  const width = (spanDays / days.length) * 100;
+  
+  const { start: timelineStart, end: timelineEnd } = getTimelineRange(scale, days);
+  
+  if (end < timelineStart || start > timelineEnd) return null;
+  
+  const visibleStart = start < timelineStart ? timelineStart : start;
+  const visibleEnd = end > timelineEnd ? timelineEnd : end;
+  
+  const totalMs = timelineEnd.getTime() - timelineStart.getTime();
+  if (totalMs <= 0) return null;
+  
+  const left = ((visibleStart.getTime() - timelineStart.getTime()) / totalMs) * 100;
+  const width = ((visibleEnd.getTime() - visibleStart.getTime()) / totalMs) * 100;
+  
   return { left, width };
 }
 
@@ -430,6 +569,7 @@ function TimelineBoard({
   rows,
   days,
   mode,
+  scale,
   onCreateChild,
   onEdit,
   onRemove,
@@ -441,6 +581,7 @@ function TimelineBoard({
   rows: TimelineRow[];
   days: Date[];
   mode: ViewMode;
+  scale: "day" | "week" | "month" | "quarter";
   onCreateChild: (id: string) => void;
   onEdit: (task: TaskItem) => void;
   onRemove: (id: string) => void;
@@ -455,19 +596,46 @@ function TimelineBoard({
     rect: { left: number; top: number; width: number; height: number };
   } | null>(null);
 
+  // Helper for ISO week number
+  const getWeekNumber = (d: Date): number => {
+    const date = new Date(d.getTime());
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() + 3 - (date.getDay() + 6) % 7);
+    const week1 = new Date(date.getFullYear(), 0, 4);
+    return 1 + Math.round(((date.getTime() - week1.getTime()) / 86400000 - 3 + (week1.getDay() + 6) % 7) / 7);
+  };
+
+  const getHeaderTitle = () => {
+    if (days.length === 0) return "";
+    if (scale === "day") {
+      return `${days[0].getFullYear()}年${days[0].getMonth() + 1}月${days[0].getDate()}日`;
+    }
+    if (scale === "week") {
+      return `${days[0].getFullYear()}年 第${getWeekNumber(days[0])}周 (${days[0].getMonth() + 1}.${days[0].getDate()} - ${days[6].getMonth() + 1}.${days[6].getDate()})`;
+    }
+    if (scale === "month") {
+      return `${days[0].getFullYear()}年${(days[0].getMonth() + 1).toString().padStart(2, "0")}月`;
+    }
+    if (scale === "quarter") {
+      const q = Math.floor(days[0].getMonth() / 3) + 1;
+      return `${days[0].getFullYear()}年 第${q}季度 (${days[0].getMonth() + 1}月 - ${days[2].getMonth() + 1}月)`;
+    }
+    return "";
+  };
+
   return (
     <div 
-      className="overflow-x-auto overflow-y-scroll rounded-xl border border-border bg-card shadow-xl shadow-black/10"
+      className="h-[calc(100vh-290px)] min-h-[400px] overflow-auto rounded-xl border border-border bg-card shadow-xl shadow-black/10"
       onScroll={() => setHoveredBar(null)}
     >
       <div className="w-full min-w-[1000px]">
         <div className="sticky top-0 z-20 grid border-b border-border bg-card" style={{ gridTemplateColumns: `${leftWidth}px 1fr` }}>
-          <div className="flex items-center justify-between border-r border-border px-4 py-3">
+          <div className="sticky left-0 z-30 flex items-center justify-between border-r border-border px-4 py-3 bg-card">
             <div className="text-sm font-semibold text-muted-foreground">
               {mode === "wbs" ? "核心任务及 WBS 分解阶层" : "个人甘特"}
             </div>
             <span className="rounded border border-border bg-input px-2 py-1 text-xs text-muted-foreground">
-              {days[0].getFullYear()}年{(days[0].getMonth() + 1).toString().padStart(2, "0")}月
+              {getHeaderTitle()}
             </span>
           </div>
           <div className="flex bg-white/[0.025] flex-1">
@@ -490,12 +658,31 @@ function TimelineBoard({
                 labelChar = "班";
               }
 
+              const getColumnLabel = () => {
+                if (scale === "day") {
+                  return `${day.getHours().toString().padStart(2, "0")}:00`;
+                }
+                if (scale === "week") {
+                  const weeks = ["日", "一", "二", "三", "四", "五", "六"];
+                  return `${day.getDate()}(${weeks[day.getDay()]})`;
+                }
+                if (scale === "month") {
+                  return day.getDate();
+                }
+                if (scale === "quarter") {
+                  return `${day.getMonth() + 1}月`;
+                }
+                return "";
+              };
+
               return (
                 <div key={day.toISOString()} className={`flex-1 min-w-[24px] border-r border-border py-1 text-center text-[10px] relative ${bgClass}`}>
-                  <div className="text-[9px] text-muted-foreground">{index % 7 === 0 ? `W${Math.floor(index / 7) + 1}` : ""}</div>
+                  {scale === "month" && (
+                    <div className="text-[9px] text-muted-foreground">{index % 7 === 0 ? `W${Math.floor(index / 7) + 1}` : ""}</div>
+                  )}
                   <div className="font-semibold relative z-10" title={dayInfo.label || undefined}>
-                    {day.getDate()}
-                    {labelChar && (
+                    {getColumnLabel()}
+                    {labelChar && scale !== "day" && scale !== "quarter" && (
                       <span className={`absolute -right-1 -top-1.5 text-[7px] font-extrabold scale-75 opacity-90 px-0.5 rounded-sm ${
                         isHoliday ? "text-rose-400 bg-rose-500/10" : isAdjustedWork ? "text-amber-400 bg-amber-500/10" : "text-sky-400 bg-sky-500/10"
                       }`}>{labelChar}</span>
@@ -511,7 +698,7 @@ function TimelineBoard({
           if (row.kind === "group") {
             const isCollapsed = collapsedIds.has(row.id);
             const groupBar = (row.planStartDate && row.planEndDate) 
-              ? barGeometry({ planStartDate: row.planStartDate, planEndDate: row.planEndDate } as TaskItem, days)
+              ? barGeometry({ planStartDate: row.planStartDate, planEndDate: row.planEndDate } as TaskItem, days, scale)
               : null;
             return (
               <div 
@@ -520,7 +707,7 @@ function TimelineBoard({
                 style={{ gridTemplateColumns: `${leftWidth}px 1fr` }}
                 onClick={() => toggleCollapse(row.id)}
               >
-                <div className="flex items-center gap-2 border-r border-border px-4 py-3 text-sm font-semibold select-none">
+                <div className="sticky left-0 z-10 flex items-center gap-2 border-r border-border px-4 py-3 text-sm font-semibold select-none bg-card">
                   {isCollapsed ? (
                     <ChevronRight className="h-4 w-4 text-slate-400 shrink-0" />
                   ) : (
@@ -575,7 +762,7 @@ function TimelineBoard({
             );
           }
           const task = row.task!;
-          const bar = barGeometry(task, days);
+          const bar = barGeometry(task, days, scale);
           const isParent = task.children.length > 0;
           const barColor = mode === "person" 
             ? "bg-sky-600/85 dark:bg-blue-500/35 border-sky-700/90 dark:border-blue-500/50 text-white font-bold shadow-md" 
@@ -584,7 +771,7 @@ function TimelineBoard({
             : "bg-emerald-600/85 dark:bg-emerald-500/35 border-emerald-700/90 dark:border-emerald-500/50 text-white font-bold shadow-md";
           return (
             <div key={`${row.id}-${mode}`} className="group grid min-h-[62px] border-b border-border relative hover:z-30" style={{ gridTemplateColumns: `${leftWidth}px 1fr` }}>
-              <div className="flex items-start gap-2 border-r border-border px-4 py-3" style={{ paddingLeft: 16 + (mode === "wbs" ? (row.depth || 0) * 18 : 0) }}>
+              <div className="sticky left-0 z-10 flex items-start gap-2 border-r border-border px-4 py-3 bg-card" style={{ paddingLeft: 16 + (mode === "wbs" ? (row.depth || 0) * 18 : 0) }}>
                 {mode === "wbs" && (
                   task.children.length > 0 ? (
                     <button
@@ -608,21 +795,25 @@ function TimelineBoard({
                       一级任务：{taskIdToL1Title.get(task.id)}
                     </div>
                   )}
-                  <div className="truncate text-sm font-semibold text-foreground">{task.title}</div>
+                  {/* 标题与操作按钮同一行 */}
+                  <div className="flex items-center justify-between gap-2 min-h-[24px]">
+                    <div className="truncate text-sm font-semibold text-foreground" title={task.title}>{task.title}</div>
+                    <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+                      <button title="新增子任务" onClick={() => onCreateChild(task.id)} disabled={task.level >= 3} className="rounded p-1 text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-30"><Plus className="h-3.5 w-3.5" /></button>
+                      <button title="编辑" onClick={() => onEdit(task)} className="rounded p-1 text-sky-300 hover:bg-sky-500/10"><Edit3 className="h-3.5 w-3.5" /></button>
+                      <button title="删除/取消" onClick={() => onRemove(task.id)} className="rounded p-1 text-red-300 hover:bg-red-500/10"><Trash2 className="h-3.5 w-3.5" /></button>
+                    </div>
+                  </div>
+                  {/* 下一行：小组/计划人日/实际人日/执行人 */}
                   <div className="mt-1 text-xs text-muted-foreground">{row.subtitle}</div>
                   {(task.monthlyItemType || task.versionType) && (
-                    <div className="mt-2 flex items-center gap-2 text-[11px] text-muted-foreground">
+                    <div className="mt-1.5 flex items-center gap-2 text-[11px] text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Folder className="h-3 w-3 text-amber-400" />
                         {task.monthlyItemType ? "已关联月度事项" : "已关联版本"}
                       </span>
                     </div>
                   )}
-                </div>
-                <div className="hidden shrink-0 gap-1 group-hover:flex">
-                  <button title="新增子任务" onClick={() => onCreateChild(task.id)} disabled={task.level >= 3} className="rounded p-1.5 text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-30"><Plus className="h-4 w-4" /></button>
-                  <button title="编辑" onClick={() => onEdit(task)} className="rounded p-1.5 text-sky-300 hover:bg-sky-500/10"><Edit3 className="h-4 w-4" /></button>
-                  <button title="删除/取消" onClick={() => onRemove(task.id)} className="rounded p-1.5 text-red-300 hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
                 </div>
               </div>
               <div className="relative">
@@ -774,12 +965,50 @@ function TimelineBoard({
   );
 }
 
-export default function ManagedTaskManager({ tasks, calendars, context, isDeptManager = true }: { tasks: TaskItem[]; calendars: CalendarItem[]; context: Context; isDeptManager?: boolean }) {
+function getDaysForScale(scale: "day" | "week" | "month" | "quarter", filterDateStr: string) {
+  const [y, m, d] = filterDateStr.split("-").map(Number);
+  const base = new Date(y, m - 1, d);
+
+  if (scale === "day") {
+    return Array.from({ length: 24 }, (_, h) => new Date(y, m - 1, d, h, 0, 0, 0));
+  }
+
+  if (scale === "week") {
+    const dayOfWeek = base.getDay();
+    const distance = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date(base);
+    monday.setDate(base.getDate() + distance);
+    
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + index);
+      return date;
+    });
+  }
+
+  if (scale === "month") {
+    const end = new Date(y, m, 0);
+    return Array.from({ length: end.getDate() }, (_, index) => new Date(y, m - 1, index + 1));
+  }
+
+  if (scale === "quarter") {
+    const quarterStartMonth = Math.floor((m - 1) / 3) * 3;
+    return Array.from({ length: 3 }, (_, index) => new Date(y, quarterStartMonth + index, 1));
+  }
+
+  return [];
+}
+
+export default function ManagedTaskManager({ tasks, calendars, context, isDeptManager = true, currentUserTeamIds = [] }: { tasks: TaskItem[]; calendars: CalendarItem[]; context: Context; isDeptManager?: boolean; currentUserTeamIds?: string[] }) {
   const [view, setView] = useState<ViewMode>("wbs");
+  const [scale, setScale] = useState<"day" | "week" | "month" | "quarter">("month");
   const [query, setQuery] = useState("");
-  const [filterYM, setFilterYM] = useState<string>(() => {
+  const [filterDate, setFilterDate] = useState<string>(() => {
     const today = new Date();
-    return `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, "0");
+    const d = String(today.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   });
 
   useEffect(() => {
@@ -788,7 +1017,7 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       const search = params.get("search");
       if (search) {
         setQuery(search);
-        setFilterYM(""); // 清除月份筛选，显示搜索到的任务
+        setFilterDate(""); // 清除日期筛选，显示搜索到的任务
       }
     }
   }, []);
@@ -816,13 +1045,41 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
   };
 
   const [executorFilter, setExecutorFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
 
-  const [filterYear, filterMonth] = useMemo(() => {
-    if (!filterYM) return [null, null];
-    const [y, m] = filterYM.split("-").map(Number);
-    return [y, m];
-  }, [filterYM]);
+  const { start: filterStart, end: filterEnd } = useMemo(() => {
+    if (!filterDate) return { start: null, end: null };
+    const [y, m, d] = filterDate.split("-").map(Number);
+    const base = new Date(y, m - 1, d);
+
+    if (scale === "day") {
+      const start = new Date(y, m - 1, d, 0, 0, 0, 0);
+      const end = new Date(y, m - 1, d, 23, 59, 59, 999);
+      return { start, end };
+    }
+    if (scale === "week") {
+      const dayOfWeek = base.getDay();
+      const distance = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+      const monday = new Date(base);
+      monday.setDate(base.getDate() + distance);
+      monday.setHours(0, 0, 0, 0);
+      const sunday = new Date(monday);
+      sunday.setDate(monday.getDate() + 6);
+      sunday.setHours(23, 59, 59, 999);
+      return { start: monday, end: sunday };
+    }
+    if (scale === "month") {
+      const start = new Date(y, m - 1, 1, 0, 0, 0, 0);
+      const end = new Date(y, m, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+    if (scale === "quarter") {
+      const quarterStartMonth = Math.floor((m - 1) / 3) * 3;
+      const start = new Date(y, quarterStartMonth, 1, 0, 0, 0, 0);
+      const end = new Date(y, quarterStartMonth + 3, 0, 23, 59, 59, 999);
+      return { start, end };
+    }
+    return { start: null, end: null };
+  }, [filterDate, scale]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -853,27 +1110,26 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       const text = `${task.title} ${taskNo(task)} ${task.executor?.name || ""} ${task.productLineTeam.name}`.toLowerCase();
 
       let matchesDate = true;
-      if (filterYear && filterMonth) {
-        const startOfMonth = new Date(filterYear, filterMonth - 1, 1);
-        const endOfMonth = new Date(filterYear, filterMonth, 0, 23, 59, 59, 999);
+      if (filterStart && filterEnd) {
         if (task.planStartDate && task.planEndDate) {
           const start = new Date(task.planStartDate);
           const end = new Date(task.planEndDate);
-          matchesDate = start <= endOfMonth && end >= startOfMonth;
+          matchesDate = start <= filterEnd && end >= filterStart;
         } else {
-          matchesDate = false;
+          // 未填写排期时间的待排期任务/节点（如 能碳管理中心V1.0.0）默认保留展示，避免被时间范围硬截断
+          matchesDate = true;
         }
       }
 
       const matchesTeam = selectedTeamIds.length === 0 || selectedTeamIds.includes(task.productLineTeam.id);
 
-      if (matchesDate && matchesTeam && (!query || text.includes(query.toLowerCase())) && (!executorFilter || task.executorId === executorFilter) && (!statusFilter || task.status === statusFilter)) {
+      if (matchesDate && matchesTeam && (!query || text.includes(query.toLowerCase())) && (!executorFilter || task.executorId === executorFilter)) {
         directMatchIds.add(task.id);
       }
     });
 
-    // 非 WBS 模式直接返回匹配结果
-    if (view !== "wbs") {
+    // 非树形结构视图（如责任人分组视图）直接返回匹配结果
+    if (view !== "wbs" && view !== "grid") {
       return tasks.filter((t) => directMatchIds.has(t.id));
     }
 
@@ -904,7 +1160,7 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
     Array.from(includedIds).forEach((id) => addDescendants(id));
 
     return tasks.filter((t) => includedIds.has(t.id));
-  }, [tasks, query, selectedTeamIds, executorFilter, statusFilter, filterYear, filterMonth, view]);
+  }, [tasks, query, selectedTeamIds, executorFilter, filterStart, filterEnd, view]);
 
   useEffect(() => {
     if (view === "person") {
@@ -946,14 +1202,11 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
     return map;
   }, [tasks]);
   const days = useMemo(() => {
-    if (filterYear && filterMonth) {
-      const year = Number(filterYear);
-      const month = Number(filterMonth) - 1;
-      const end = new Date(year, month + 1, 0);
-      return Array.from({ length: end.getDate() }, (_, index) => new Date(year, month, index + 1));
+    if (filterDate) {
+      return getDaysForScale(scale, filterDate);
     }
-    return getDisplayRange(filteredTasks.length ? filteredTasks : tasks);
-  }, [filteredTasks, tasks, filterYear, filterMonth]);
+    return getDaysForScale(scale, new Date().toISOString().slice(0, 10));
+  }, [filterDate, scale]);
   const rows = useMemo(() => (view === "wbs" ? buildWbsRows(filteredTasks, collapsedIds) : buildGroupedRows(filteredTasks, view, positionMap, collapsedIds, context, days, selectedTeamIds)), [filteredTasks, view, collapsedIds, positionMap, context, days, selectedTeamIds]);
   const parentOptions = tasks.filter((task) => task.level < 3);
   const selectedParent = tasks.find((task) => task.id === form.parentId);
@@ -966,6 +1219,28 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
     if (!task.planStartDate || !task.planEndDate) list.push(`${task.title}：排期不完整`);
     return list;
   });
+
+  const modalMonthlyItems = useMemo(() => {
+    // 编辑一级任务时：按该任务所属小组过滤
+    const editTeamId = editingTask?.productLineTeam?.id;
+    if (editTeamId) {
+      return context.monthlyItems.filter((item) => {
+        if (!item.teamId || item.teamId === editTeamId) return true;
+        // 保留当前已关联的事项（避免切换时丢失历史关联）
+        if (form.monthlyPlanId && item.planId === form.monthlyPlanId && item.itemType === form.monthlyItemType && item.itemId === form.monthlyItemId) return true;
+        return false;
+      });
+    }
+    // 新建一级任务时：按当前用户所属小组过滤
+    if (currentUserTeamIds.length > 0) {
+      return context.monthlyItems.filter((item) => {
+        if (!item.teamId) return true;
+        return currentUserTeamIds.includes(item.teamId);
+      });
+    }
+    // 部门经理或无小组限制时：展示全部
+    return context.monthlyItems;
+  }, [context.monthlyItems, editingTask?.productLineTeam?.id, form.monthlyPlanId, form.monthlyItemType, form.monthlyItemId, currentUserTeamIds]);
 
   const openCreate = (parentId = "") => {
     setEditingId(null);
@@ -982,8 +1257,8 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       category: task.category || "DEVELOPMENT",
       sdlcNode: task.sdlcNode || "",
       status: task.status,
-      planStartDate: task.planStartDate ? shortDate(task.planStartDate) : "",
-      planEndDate: task.planEndDate ? shortDate(task.planEndDate) : "",
+      planStartDate: task.planStartDate ? dateTimeLocal(task.planStartDate) : "",
+      planEndDate: task.planEndDate ? dateTimeLocal(task.planEndDate) : "",
       plannedWorkdays: task.plannedWorkdays,
       actualWorkdays: task.actualWorkdays,
       progressPercent: task.progressPercent,
@@ -1095,47 +1370,82 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         {isDeptManager ? (
-          <div className="grid overflow-hidden rounded-xl border border-border bg-card p-1 shadow-sm sm:grid-cols-2">
+          <div className="inline-grid overflow-hidden rounded-xl border border-border bg-card p-1 shadow-sm sm:grid-cols-3">
             {[
               { key: "wbs", label: "WBS 任务视图", icon: Layers3 },
               { key: "person", label: "个人甘特", icon: CalendarDays },
+              { key: "grid", label: "多维数据表", icon: Table2 },
             ].map((item) => {
               const Icon = item.icon;
               const active = view === item.key;
               return (
-                <button key={item.key} onClick={() => setView(item.key as ViewMode)} className={`flex min-h-12 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition ${active ? "bg-indigo-600 text-white font-bold shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
-                  <Icon className="h-4 w-4" />
+                <button key={item.key} onClick={() => setView(item.key as ViewMode)} className={`flex h-8 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition ${active ? "bg-indigo-600 text-white font-bold shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+                  <Icon className="h-3.5 w-3.5" />
                   {item.label}
                 </button>
               );
             })}
           </div>
         ) : (
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-2 px-4 shadow-sm text-sm font-semibold text-foreground">
-            <Layers3 className="h-4 w-4 text-indigo-500" />
-            WBS 任务视图
+          <div className="inline-grid overflow-hidden rounded-xl border border-border bg-card p-1 shadow-sm sm:grid-cols-2">
+            {[
+              { key: "wbs", label: "WBS 任务视图", icon: Layers3 },
+              { key: "grid", label: "多维数据表", icon: Table2 },
+            ].map((item) => {
+              const Icon = item.icon;
+              const active = view === item.key;
+              return (
+                <button key={item.key} onClick={() => setView(item.key as ViewMode)} className={`flex h-8 items-center justify-center gap-1.5 rounded-lg px-3.5 text-xs font-semibold transition ${active ? "bg-indigo-600 text-white font-bold shadow-sm" : "text-muted-foreground hover:bg-muted hover:text-foreground"}`}>
+                  <Icon className="h-3.5 w-3.5" />
+                  {item.label}
+                </button>
+              );
+            })}
           </div>
         )}
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-2.5">
           <label className="relative min-w-[220px] flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务名称/成果书..." className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-3 text-sm text-foreground outline-none focus:border-indigo-500" />
           </label>
+          <div className="flex rounded-lg border border-border bg-card p-1 shadow-sm">
+            {[
+              { key: "day", label: "日" },
+              { key: "week", label: "周" },
+              { key: "month", label: "月" },
+              { key: "quarter", label: "季" },
+            ].map((item) => {
+              const active = scale === item.key;
+              return (
+                <button
+                  key={item.key}
+                  onClick={() => setScale(item.key as any)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                    active
+                      ? "bg-indigo-600 text-white font-bold shadow-sm"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
           <div className="relative">
             <input
-              type="month"
-              value={filterYM}
-              onChange={(event) => setFilterYM(event.target.value)}
+              type="date"
+              value={filterDate}
+              onChange={(event) => setFilterDate(event.target.value)}
               className={`${controlClass} text-foreground cursor-pointer pr-8`}
               style={{ colorScheme: "dark" }}
             />
-            {filterYM && (
+            {filterDate && (
               <button
-                onClick={() => setFilterYM("")}
+                onClick={() => setFilterDate("")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-white hover:bg-accent transition"
-                title="清除月份筛选，显示全部任务"
+                title="清除日期筛选，显示全部任务"
               >
                 <X className="h-3.5 w-3.5" />
               </button>
@@ -1195,7 +1505,6 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
             )}
           </div>
           <select value={executorFilter} onChange={(event) => setExecutorFilter(event.target.value)} className={controlClass}><option value="">所有经办人</option>{context.users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select>
-          <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)} className={controlClass}><option value="">所有状态</option>{statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select>
           <button onClick={() => openCreate()} className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500"><Plus className="h-4 w-4" />创建任务</button>
         </div>
       </div>
@@ -1208,9 +1517,19 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
         </div>
       </div>
 
-      {warnings.length > 0 && <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">{warnings.slice(0, 4).join("；")}{warnings.length > 4 ? `；另有 ${warnings.length - 4} 项提醒` : ""}</div>}
+      {warnings.length > 0 && <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 dark:bg-amber-500/15 px-4 py-3 text-sm font-semibold text-red-700 dark:text-red-300 shadow-sm">{warnings.slice(0, 4).join("；")}{warnings.length > 4 ? `；另有 ${warnings.length - 4} 项提醒` : ""}</div>}
 
-      <TimelineBoard rows={rows} days={days} mode={view} onCreateChild={openCreate} onEdit={openEdit} onRemove={remove} getDayInfo={getDayInfo} collapsedIds={collapsedIds} toggleCollapse={toggleCollapse} taskIdToL1Title={taskIdToL1Title} />
+      {view === "grid" ? (
+        <TaskGridView
+          tasks={filteredTasks}
+          context={context}
+          onCreateChild={openCreate}
+          onEdit={openEdit}
+          onRemove={remove}
+        />
+      ) : (
+        <TimelineBoard rows={rows} days={days} mode={view} scale={scale} onCreateChild={openCreate} onEdit={openEdit} onRemove={remove} getDayInfo={getDayInfo} collapsedIds={collapsedIds} toggleCollapse={toggleCollapse} taskIdToL1Title={taskIdToL1Title} />
+      )}
 
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 p-4 backdrop-blur-sm">
@@ -1219,27 +1538,51 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
               <h2 className="text-lg font-semibold text-white">{editingId ? "编辑任务" : "新建任务"}</h2>
               <button onClick={() => setModalOpen(false)} className="rounded-lg p-2 text-muted-foreground hover:bg-accent"><X className="h-5 w-5" /></button>
             </div>
-            {error && <div className="border-b border-red-500/20 bg-red-500/10 px-5 py-3 text-sm text-red-300">{error}</div>}
+            {error && <div className="border-b border-red-500/30 bg-red-500/10 dark:bg-red-500/15 px-5 py-3 text-sm font-medium text-red-700 dark:text-red-300">{error}</div>}
             <div className="grid max-h-[72vh] gap-4 overflow-y-auto p-5 md:grid-cols-2">
               <label className="space-y-1 text-xs text-muted-foreground">上级任务<select value={form.parentId} disabled={Boolean(editingId)} onChange={(event) => setForm((current) => ({ ...current, parentId: event.target.value }))} className={`${controlClass} w-full`}><option value="">一级任务</option>{parentOptions.map((task) => <option key={task.id} value={task.id}>L{task.level} / {task.title}</option>)}</select></label>
               {!selectedParent && <label className="space-y-1 text-xs text-muted-foreground">一级任务分类<select value={form.category} onChange={(event) => setForm((current) => ({ ...current, category: event.target.value }))} className={`${controlClass} w-full`}><option value="DEVELOPMENT">研发任务</option><option value="OTHER">其他</option></select></label>}
               {selectedParent?.category === "DEVELOPMENT" && selectedParent.level === 1 && <label className="space-y-1 text-xs text-muted-foreground">SDLC 节点<select value={form.sdlcNode} onChange={(event) => setForm((current) => ({ ...current, sdlcNode: event.target.value }))} className={`${controlClass} w-full`}><option value="">不选择</option>{sdlcNodes.map((node) => <option key={node} value={node}>{sdlcLabels[node]}</option>)}</select></label>}
               <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">任务名称<input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className={`${controlClass} w-full`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">任务说明<textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={3} className={`${controlClass} w-full`} /></label>
-              <label className="space-y-1 text-xs text-muted-foreground">计划开始<input type="date" value={form.planStartDate} onChange={(event) => setForm((current) => ({ ...current, planStartDate: event.target.value }))} className={`${controlClass} w-full`} /></label>
-              <label className="space-y-1 text-xs text-muted-foreground">计划结束<input type="date" value={form.planEndDate} onChange={(event) => setForm((current) => ({ ...current, planEndDate: event.target.value }))} className={`${controlClass} w-full`} /></label>
+              <label className="space-y-1 text-xs text-muted-foreground">计划开始<input type="datetime-local" value={form.planStartDate} onChange={(event) => setForm((current) => ({ ...current, planStartDate: event.target.value }))} className={`${controlClass} w-full`} /></label>
+              <label className="space-y-1 text-xs text-muted-foreground">计划结束<input type="datetime-local" value={form.planEndDate} onChange={(event) => setForm((current) => ({ ...current, planEndDate: event.target.value }))} className={`${controlClass} w-full`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground">计划人日（系统自动计算）<input type="number" value={form.plannedWorkdays} readOnly className={`${controlClass} w-full bg-input/50 cursor-not-allowed`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground">实际人日（系统自动计算）<input type="number" value={form.actualWorkdays} readOnly className={`${controlClass} w-full bg-input/50 cursor-not-allowed`} /></label>
-              <label className="space-y-1 text-xs text-muted-foreground">执行人<select value={form.executorId} onChange={(event) => setForm((current) => ({ ...current, executorId: event.target.value, status: event.target.value ? current.status : "UNSCHEDULED", progressPercent: event.target.value ? current.progressPercent : 0 }))} className={`${controlClass} w-full`}><option value="">未分配</option>{context.users.map((user) => <option key={user.id} value={user.id}>{user.name}</option>)}</select></label>
+              <label className="space-y-1 text-xs text-muted-foreground">执行人
+                {(() => {
+                  // 弹窗中的 Autocomplete 执行人选择器（本组优先 + 打字搜索）
+                  const modalTeamId = selectedParent?.productLineTeam?.id || editingTask?.productLineTeam?.id || (selectedTeamIds.length === 1 ? selectedTeamIds[0] : "");
+                  const teamMemberIdSet = new Set(
+                    (context.teams.find((t) => t.id === modalTeamId)?.members || []).map((m) => m.userId)
+                  );
+                  const selectedUser = context.users.find((u) => u.id === form.executorId);
+                  return (
+                    <ModalExecutorPicker
+                      value={form.executorId}
+                      displayName={selectedUser?.name || ""}
+                      users={context.users}
+                      teamMemberIds={teamMemberIdSet}
+                      controlClass={controlClass}
+                      onChange={(userId) => setForm((current) => ({
+                        ...current,
+                        executorId: userId,
+                        status: userId ? current.status : "UNSCHEDULED",
+                        progressPercent: userId ? current.progressPercent : 0,
+                      }))}
+                    />
+                  );
+                })()}
+              </label>
               <label className="space-y-1 text-xs text-muted-foreground">状态<select value={form.status} disabled={hasChildren} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))} className={`${controlClass} w-full ${hasChildren ? "bg-input/50 cursor-not-allowed" : ""}`}>{statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></label>
               <label className="space-y-1 text-xs text-muted-foreground">进度<input type="number" min={0} max={100} value={form.progressPercent} readOnly={hasChildren} onChange={(event) => setForm((current) => ({ ...current, progressPercent: Number(event.target.value) }))} className={`${controlClass} w-full ${hasChildren ? "bg-input/50 cursor-not-allowed" : ""}`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground">实际开始<input type="datetime-local" value={form.actualStartAt} onChange={(event) => setForm((current) => ({ ...current, actualStartAt: event.target.value }))} className={`${controlClass} w-full`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground">实际完成<input type="datetime-local" value={form.actualFinishAt} onChange={(event) => setForm((current) => ({ ...current, actualFinishAt: event.target.value }))} className={`${controlClass} w-full`} /></label>
-              {!selectedParent && <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">关联月度计划事项<select value={`${form.monthlyPlanId}|${form.monthlyItemType}|${form.monthlyItemId}`} onChange={(event) => { const [monthlyPlanId, monthlyItemType, monthlyItemId] = event.target.value.split("|"); setForm((current) => ({ ...current, monthlyPlanId: monthlyPlanId || "", monthlyItemType: monthlyItemType || "", monthlyItemId: monthlyItemId || "" })); }} className={`${controlClass} w-full`}><option value="||">不关联月度计划事项</option>{context.monthlyItems.map((item) => <option key={`${item.itemType}-${item.itemId}`} value={`${item.planId}|${item.itemType}|${item.itemId}`}>{item.label}</option>)}</select></label>}
+              {!selectedParent && <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">关联月度计划事项<select value={`${form.monthlyPlanId}|${form.monthlyItemType}|${form.monthlyItemId}`} onChange={(event) => { const [monthlyPlanId, monthlyItemType, monthlyItemId] = event.target.value.split("|"); setForm((current) => ({ ...current, monthlyPlanId: monthlyPlanId || "", monthlyItemType: monthlyItemType || "", monthlyItemId: monthlyItemId || "" })); }} className={`${controlClass} w-full`}><option value="||">不关联月度计划事项</option>{modalMonthlyItems.map((item) => <option key={`${item.itemType}-${item.itemId}`} value={`${item.planId}|${item.itemType}|${item.itemId}`}>{item.label}</option>)}</select></label>}
               {!selectedParent && <><label className="space-y-1 text-xs text-muted-foreground">关联版本类型<select value={form.versionType} onChange={(event) => setForm((current) => ({ ...current, versionType: event.target.value, versionId: "" }))} className={`${controlClass} w-full`}><option value="">不关联</option><option value="PRODUCT">产品版本</option><option value="PROJECT">项目版本</option></select></label><label className="space-y-1 text-xs text-muted-foreground">关联版本<select value={form.versionId} disabled={!form.versionType} onChange={(event) => setForm((current) => ({ ...current, versionId: event.target.value }))} className={`${controlClass} w-full`}><option value="">请选择</option>{versionOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label></>}
               <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">备注<textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} rows={2} className={`${controlClass} w-full`} /></label>
             </div>
-            <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4"><div className="min-h-5 flex-1 text-sm text-red-300">{error}</div><div className="flex gap-3"><button onClick={() => setModalOpen(false)} className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground">取消</button><button onClick={submit} disabled={pending} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm text-white disabled:opacity-50">{pending ? "保存中..." : "保存"}</button></div></div>
+            <div className="flex items-center justify-between gap-3 border-t border-border px-5 py-4"><div className="min-h-5 flex-1 text-sm font-medium text-red-600 dark:text-red-300">{error}</div><div className="flex gap-3"><button onClick={() => setModalOpen(false)} className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground">取消</button><button onClick={submit} disabled={pending} className="rounded-lg bg-indigo-600 px-5 py-2 text-sm text-white disabled:opacity-50">{pending ? "保存中..." : "保存"}</button></div></div>
           </div>
         </div>
       )}

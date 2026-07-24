@@ -41,6 +41,7 @@ export default async function WorkCalendarPage() {
           year: calendar.year,
           status: calendar.status,
           standardHours: calendar.standardHours,
+          workWindows: calendar.workWindows,
           days: calendar.days.map((day) => {
             const y = day.date.getUTCFullYear();
             const m = String(day.date.getUTCMonth() + 1).padStart(2, "0");
@@ -49,6 +50,7 @@ export default async function WorkCalendarPage() {
               date: `${y}-${m}-${d}`,
               type: day.type,
               standardHours: day.standardHours,
+              workWindows: day.workWindows,
               label: day.label,
               notes: day.notes,
             };

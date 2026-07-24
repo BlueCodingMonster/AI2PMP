@@ -36,13 +36,15 @@ export const workCalendarDayTypeEnum = {
 
 const optionalId = z.string().trim().optional().nullable();
 const optionalDate = z.string().trim().optional().nullable();
+const optionalEnum = <T extends Record<string, string>>(enumObj: T) =>
+  z.preprocess((val) => (val === "" || val === undefined ? null : val), z.nativeEnum(enumObj).optional().nullable());
 
 export const managedTaskSchema = z.object({
   parentId: optionalId,
   title: z.string().trim().min(1, "请输入任务名称").max(120, "任务名称最多120个字符"),
   description: z.string().trim().max(5000, "任务说明最多5000个字符").optional().nullable(),
-  category: z.nativeEnum(managedTaskCategoryEnum).optional().nullable(),
-  sdlcNode: z.nativeEnum(managedTaskSdlcNodeEnum).optional().nullable(),
+  category: optionalEnum(managedTaskCategoryEnum),
+  sdlcNode: optionalEnum(managedTaskSdlcNodeEnum),
   status: z.nativeEnum(managedTaskStatusEnum).default(managedTaskStatusEnum.UNSCHEDULED),
   planStartDate: optionalDate,
   planEndDate: optionalDate,
@@ -52,9 +54,9 @@ export const managedTaskSchema = z.object({
   actualFinishAt: optionalDate,
   executorId: optionalId,
   monthlyPlanId: optionalId,
-  monthlyItemType: z.nativeEnum(managedTaskMonthlyItemTypeEnum).optional().nullable(),
+  monthlyItemType: optionalEnum(managedTaskMonthlyItemTypeEnum),
   monthlyItemId: optionalId,
-  versionType: z.nativeEnum(managedTaskVersionTypeEnum).optional().nullable(),
+  versionType: optionalEnum(managedTaskVersionTypeEnum),
   versionId: optionalId,
   notes: z.string().trim().max(5000, "备注最多5000个字符").optional().nullable(),
 }).superRefine((data, context) => {
@@ -74,15 +76,17 @@ export const workCalendarDaySchema = z.object({
   date: z.string().trim().min(1),
   type: z.nativeEnum(workCalendarDayTypeEnum),
   standardHours: z.coerce.number().min(0).max(24).optional().nullable(),
+  workWindows: z.string().trim().optional().nullable(),
   label: z.string().trim().max(80).optional().nullable(),
   notes: z.string().trim().max(1000).optional().nullable(),
 });
 
 export const workCalendarSchema = z.object({
-  productLineTeamId: optionalId, // 保留兼容性，server 端强制设为 null（全局日历）
+  productLineTeamId: optionalId,
   year: z.coerce.number().int().min(2020).max(2100),
   status: z.nativeEnum(workCalendarStatusEnum).default(workCalendarStatusEnum.DRAFT),
   standardHours: z.coerce.number().min(1).max(24).default(8),
+  workWindows: z.string().trim().optional().nullable(),
   days: z.array(workCalendarDaySchema).default([]),
 });
 
