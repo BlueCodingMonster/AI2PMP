@@ -5,14 +5,18 @@ import { prisma } from "@/lib/prisma";
 
 export default async function ManagedTasksPage() {
   const session = await auth();
-  const dbUser = session?.user?.id
-    ? await prisma.user.findUnique({
-        where: { id: session.user.id },
-        select: { level: true, productLineMemberships: { select: { teamId: true } } },
-      })
-    : null;
+  const userId = session?.user?.id;
 
-  const [{ tasks: allTasks, calendars }, context] = await Promise.all([getManagedTasks(), getManagedTaskContext()]);
+  const [dbUser, { tasks: allTasks, calendars }, context] = await Promise.all([
+    userId
+      ? prisma.user.findUnique({
+          where: { id: userId },
+          select: { level: true, productLineMemberships: { select: { teamId: true } } },
+        })
+      : Promise.resolve(null),
+    getManagedTasks(),
+    getManagedTaskContext(),
+  ]);
 
   const isDeptManager = dbUser?.level === "部门经理";
   const myTeamIds = dbUser?.productLineMemberships.map((m) => m.teamId) || [];

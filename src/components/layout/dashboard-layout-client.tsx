@@ -236,6 +236,7 @@ export default function DashboardLayoutClient({
                             <li key={child.href}>
                               <Link
                                 href={child.href}
+                                prefetch={true}
                                 onClick={() => setSidebarOpen(false)}
                                 title={child.label}
                                 className={`
@@ -246,8 +247,8 @@ export default function DashboardLayoutClient({
                                   }
                                   ${
                                     active
-                                      ? "bg-indigo-600/20 text-white shadow-sm font-semibold border border-indigo-500/30"
-                                      : "text-sidebar-foreground/80 hover:bg-accent hover:text-white"
+                                      ? "bg-indigo-600/20 text-indigo-600 dark:text-white shadow-sm font-semibold border border-indigo-500/30"
+                                      : "text-sidebar-foreground/80 hover:bg-accent hover:text-foreground"
                                   }
                                 `}
                               >
@@ -257,8 +258,8 @@ export default function DashboardLayoutClient({
                                 <child.icon
                                   className={`h-4 w-4 shrink-0 transition-colors ${
                                     active
-                                      ? "text-indigo-400"
-                                      : "text-muted-foreground group-hover:text-white"
+                                      ? "text-indigo-600 dark:text-indigo-400"
+                                      : "text-muted-foreground group-hover:text-foreground"
                                   }`}
                                 />
                                 <span className={isCollapsed ? "lg:hidden" : "block"}>{child.label}</span>
@@ -277,6 +278,7 @@ export default function DashboardLayoutClient({
                 <li key={item.href}>
                   <Link
                     href={item.href}
+                    prefetch={true}
                     onClick={() => setSidebarOpen(false)}
                     title={item.label}
                     className={`
