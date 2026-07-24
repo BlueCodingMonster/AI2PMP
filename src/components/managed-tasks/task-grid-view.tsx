@@ -913,14 +913,14 @@ export default function TaskGridView({
           </div>
           <div className="w-44 shrink-0 border-r border-border px-2 py-2.5 flex items-center gap-1">
             <FileText className="h-3.5 w-3.5 text-indigo-400" />
-            <span>功能 / 任务名称</span>
+            <span>任务名称</span>
           </div>
           <div className="w-24 shrink-0 border-r border-border px-1 py-2.5 text-center">SDLC 节点</div>
           <div className="w-24 shrink-0 border-r border-border px-2 py-2.5 flex items-center gap-1">
             <User className="h-3.5 w-3.5 text-purple-400" />
             <span>负责人</span>
           </div>
-          <div className="w-36 shrink-0 border-r border-border px-2 py-2.5">功能描述 (验收标准)</div>
+          <div className="w-36 shrink-0 border-r border-border px-2 py-2.5">任务描述</div>
           <div className="w-32 shrink-0 border-r border-border px-1.5 py-2.5 flex items-center gap-1">
             <Calendar className="h-3.5 w-3.5 text-emerald-400" />
             <span>计划开始</span>
@@ -951,7 +951,7 @@ export default function TaskGridView({
           </div>
           <div className="w-28 shrink-0 border-r border-border px-2 py-2.5 flex items-center gap-1">
             <Tag className="h-3.5 w-3.5 text-sky-400" />
-            <span>关联版本/项目</span>
+            <span>关联版本</span>
           </div>
         </div>
 
