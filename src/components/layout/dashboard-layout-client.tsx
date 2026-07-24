@@ -156,14 +156,14 @@ export default function DashboardLayoutClient({
           isCollapsed ? "lg:justify-center lg:px-0 px-4 justify-between" : "justify-between px-4"
         }`}>
           <Link href="/" className="flex items-center gap-3 group shrink-0" title="SDLC 研发效能平台">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/[0.02] border border-white/10 shadow-lg shadow-black/20 backdrop-blur-md group-hover:scale-105 transition-transform duration-300">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-indigo-50 border border-indigo-100/80 dark:bg-white/[0.02] dark:border-white/10 shadow-xs backdrop-blur-md group-hover:scale-105 transition-transform duration-300">
               <SdlcIcon size={32} colored={true} />
             </div>
             <div className={`${isCollapsed ? "lg:hidden" : "block"} transition-opacity duration-200`}>
-              <span className="text-lg font-bold tracking-tight text-foreground dark:text-white leading-none block whitespace-nowrap">
+              <span className="text-lg font-extrabold tracking-tight text-slate-900 dark:text-white leading-none block whitespace-nowrap">
                 SDLC
               </span>
-              <span className="text-[10px] text-muted-foreground dark:text-indigo-300/70 font-medium tracking-tight leading-none block mt-0.5 whitespace-nowrap">
+              <span className="text-[10px] text-indigo-600 dark:text-indigo-300 font-bold tracking-tight leading-none block mt-0.5 whitespace-nowrap">
                 研发效能平台
               </span>
             </div>

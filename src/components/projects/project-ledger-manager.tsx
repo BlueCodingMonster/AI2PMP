@@ -246,14 +246,14 @@ export default function ProjectLedgerManager({
             <FolderKanban className="h-4 w-4" />
           </div>
           <div>
-            <h1 className="text-xl font-bold leading-9 text-white">项目管理</h1>
+            <h1 className="text-xl font-bold leading-9 text-slate-900 dark:text-white">项目管理</h1>
             <p className="text-xs text-muted-foreground">
               独立维护客户合同项目资料及交付版本。
             </p>
           </div>
         </div>
         <span className="rounded-md border border-border bg-white/[0.03] px-2.5 py-1.5 text-[11px] text-muted-foreground">
-          <strong className="mr-1 text-white">{projects.length}</strong>项目
+          <strong className="mr-1 text-slate-900 dark:text-white">{projects.length}</strong>项目
         </span>
       </header>
       {error && (
@@ -265,7 +265,7 @@ export default function ProjectLedgerManager({
         <aside className="border-b border-border/60 bg-black/10 p-3 lg:border-b-0 lg:border-r">
           <div className="mb-3 flex items-center justify-between px-1">
             <div>
-              <h2 className="text-sm font-semibold text-white">项目列表</h2>
+              <h2 className="text-sm font-semibold text-slate-900 dark:text-white">项目列表</h2>
               <p className="text-[10px] text-muted-foreground">
                 选择项目查看资料与版本
               </p>
@@ -373,7 +373,7 @@ export default function ProjectLedgerManager({
                     <span className="rounded bg-cyan-500/10 px-2 py-0.5 text-[10px] font-bold text-cyan-300">
                       {selected.key}
                     </span>
-                    <h2 className="text-lg font-semibold text-white">
+                    <h2 className="text-lg font-semibold text-slate-900 dark:text-white">
                       {selected.name}
                     </h2>
                   </div>
@@ -551,7 +551,7 @@ function Info({ label, value }: { label: string; value?: string | null }) {
   return (
     <div>
       <p className="text-[10px] text-muted-foreground">{label}</p>
-      <p className="mt-0.5 break-words text-xs font-medium text-slate-200">
+      <p className="mt-0.5 break-words text-xs font-semibold text-slate-900 dark:text-slate-100">
         {value || "—"}
       </p>
     </div>

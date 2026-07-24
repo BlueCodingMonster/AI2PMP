@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 /* ===== 暗色主题变量 (默认与 .dark) ===== */
 :root,
 .dark {
