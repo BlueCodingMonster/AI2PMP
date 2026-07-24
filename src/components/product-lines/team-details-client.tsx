@@ -295,7 +295,7 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
       <div className="flex flex-wrap items-center justify-between gap-4">
         <Link
           href="/product-lines"
-          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-white transition-colors"
+          className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           返回小组总览
@@ -304,14 +304,14 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
         <div className="flex gap-2">
           <button
             onClick={() => setIsTeamModalOpen(true)}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-input py-1.5 px-3 text-xs font-semibold text-white hover:bg-muted"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-border bg-input py-1.5 px-3 text-xs font-semibold text-foreground hover:bg-muted"
           >
             <Edit2 className="h-3.5 w-3.5" />
             修改设置
           </button>
           <button
             onClick={handleDeleteTeam}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600/10 border border-rose-500/20 py-1.5 px-3 text-xs font-semibold text-rose-400 hover:bg-rose-600 hover:text-white"
+            className="inline-flex items-center gap-1.5 rounded-lg bg-rose-600/10 border border-rose-500/20 py-1.5 px-3 text-xs font-semibold text-rose-500 dark:text-rose-400 hover:bg-rose-600 hover:text-white"
           >
             <Trash2 className="h-3.5 w-3.5" />
             解散小组
@@ -320,13 +320,13 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
       </div>
 
       {/* 小组基本描述信息 */}
-      <div className="glass rounded-xl p-6 space-y-3">
+      <div className="bg-card border border-border rounded-xl p-6 space-y-3">
         <div className="flex items-center gap-2">
-          <span className="text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded uppercase">
+          <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded uppercase">
             Product Line Group
           </span>
         </div>
-        <h1 className="text-xl font-bold tracking-tight text-white sm:text-2xl">{team.name}</h1>
+        <h1 className="text-xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-2xl">{team.name}</h1>
         <p className="text-muted-foreground leading-relaxed">
           {team.description || <span className="italic">该研发产品线暂无详细业务范围职责描述说明</span>}
         </p>
@@ -338,15 +338,15 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
         <div className="space-y-6 lg:col-span-2">
           
           {/* 1. 固定成员管理面板 */}
-          <div className="glass rounded-xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-base font-semibold text-white flex items-center gap-1.5">
-                <Users className="h-4 w-4 text-indigo-400" />
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <Users className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 固定班底配置 ({team.members.length})
               </h3>
               <button
                 onClick={() => setIsMemberModalOpen(true)}
-                className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 inline-flex items-center gap-1"
+                className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1"
               >
                 <UserPlus className="h-3.5 w-3.5" />
                 分配新成员
@@ -370,18 +370,18 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
                   return (
                     <div
                       key={member.id}
-                      className="bg-black/10 rounded-xl p-3 border border-border/30 flex items-center justify-between gap-3 text-xs hover:border-border/60 transition-all"
+                      className="bg-muted/40 rounded-xl p-3 border border-border/60 flex items-center justify-between gap-3 text-xs hover:border-border transition-all"
                     >
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex items-center gap-2 min-w-0">
-                          <span className="font-bold text-white truncate block">{member.user.name}</span>
+                          <span className="font-bold text-slate-900 dark:text-white truncate block">{member.user.name}</span>
                           <span
                             className={`rounded px-1.5 py-0.5 text-[9px] font-bold border ${color}`}
                           >
                             {label}
                           </span>
                           {isLentOut && (
-                            <span className="rounded px-1 py-0.5 bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[8px] font-extrabold">
+                            <span className="rounded px-1 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[8px] font-extrabold">
                               借出中
                             </span>
                           )}
@@ -393,7 +393,7 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
 
                       <button
                         onClick={() => handleRemoveMember(member.userId)}
-                        className="rounded-lg p-1 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0"
+                        className="rounded-lg p-1 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors shrink-0"
                         title="移出本组"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -406,15 +406,15 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
           </div>
 
           {/* 2. 临时借入管理面板 */}
-          <div className="glass rounded-xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-base font-semibold text-white flex items-center gap-1.5">
-                <ArrowRightLeft className="h-4 w-4 text-emerald-400" />
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-1.5">
+                <ArrowRightLeft className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
                 临时借调借入 ({team.secondmentsTo.length})
               </h3>
               <button
                 onClick={() => setIsSecondmentModalOpen(true)}
-                className="text-xs font-semibold text-emerald-400 hover:text-emerald-300 inline-flex items-center gap-1"
+                className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline inline-flex items-center gap-1"
               >
                 <Plus className="h-3.5 w-3.5" />
                 登记人员借入
@@ -434,24 +434,24 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
                   return (
                     <div
                       key={sec.id}
-                      className="bg-black/10 border border-border/30 rounded-xl p-4 flex items-center justify-between gap-4 text-xs"
+                      className="bg-muted/40 border border-border/60 rounded-xl p-4 flex items-center justify-between gap-4 text-xs"
                     >
                       <div className="min-w-0 flex-1 space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-white text-sm">{sec.user.name}</span>
+                          <span className="font-bold text-slate-900 dark:text-white text-sm">{sec.user.name}</span>
                           <span
                             className={`rounded px-1.5 py-0.5 text-[9px] font-bold border ${roleColor}`}
                           >
                             借入岗位: {roleLabel}
                           </span>
-                          <span className="rounded px-1.5 py-0.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] font-bold">
+                          <span className="rounded px-1.5 py-0.5 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 text-[9px] font-bold">
                             借入中
                           </span>
                         </div>
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[10px] text-muted-foreground">
                           <span>原所属: {sec.fromTeam?.name || <span className="italic">系统未指定小组</span>}</span>
                           <span className="flex items-center gap-0.5">
-                            <Calendar className="h-3.5 w-3.5 text-indigo-400" />
+                            <Calendar className="h-3.5 w-3.5 text-indigo-600 dark:text-indigo-400" />
                             借调周期: {new Date(sec.startDate).toLocaleDateString()} 至{" "}
                             {sec.endDate ? new Date(sec.endDate).toLocaleDateString() : "不限期"}
                           </span>
@@ -460,7 +460,7 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
 
                       <button
                         onClick={() => handleCompleteSecondment(sec.id)}
-                        className="rounded-lg border border-border bg-input py-1.5 px-3 text-xs font-semibold text-white hover:bg-muted shrink-0 transition-colors"
+                        className="rounded-lg border border-border bg-input py-1.5 px-3 text-xs font-semibold text-foreground hover:bg-muted shrink-0 transition-colors"
                       >
                         结束借调/归还
                       </button>
@@ -473,32 +473,32 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
 
           {/* 3. 借出到外组情况面板 */}
           {team.secondmentsFrom.length > 0 && (
-            <div className="glass rounded-xl p-6 space-y-4">
-              <h3 className="text-base font-semibold text-white flex items-center gap-1.5 border-b border-border/40 pb-3">
-                <ArrowRightLeft className="h-4 w-4 text-orange-400" />
+            <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+              <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-1.5 border-b border-border/40 pb-3">
+                <ArrowRightLeft className="h-4 w-4 text-orange-500 dark:text-orange-400" />
                 本组固定成员外借情况 ({team.secondmentsFrom.length})
               </h3>
               <div className="space-y-3">
                 {team.secondmentsFrom.map((sec: any) => (
                   <div
                     key={sec.id}
-                    className="bg-black/10 border border-border/30 rounded-xl p-3.5 flex items-center justify-between gap-4 text-xs"
+                    className="bg-muted/40 border border-border/60 rounded-xl p-3.5 flex items-center justify-between gap-4 text-xs"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{sec.user.name}</span>
-                        <span className="rounded px-1.5 py-0.5 bg-orange-500/10 text-orange-400 border border-orange-500/20 text-[9px] font-bold">
+                        <span className="font-bold text-slate-900 dark:text-white">{sec.user.name}</span>
+                        <span className="rounded px-1.5 py-0.5 bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 text-[9px] font-bold">
                           已借出
                         </span>
                       </div>
                       <p className="text-[10px] text-muted-foreground">
-                        借调去向: <span className="text-white font-bold">{sec.toTeam.name}</span> · 担任角色: {roleLabels[sec.role as ProductLineRole]}
+                        借调去向: <span className="text-slate-900 dark:text-white font-bold">{sec.toTeam.name}</span> · 担任角色: {roleLabels[sec.role as ProductLineRole]}
                       </p>
                     </div>
                     
                     <button
                       onClick={() => handleCompleteSecondment(sec.id)}
-                      className="text-xs font-bold text-indigo-400 hover:text-indigo-300"
+                      className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                     >
                       提前收回人员
                     </button>
@@ -512,15 +512,15 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
 
         {/* 右侧：关联产品线与项目 */}
         <div className="space-y-6">
-          <div className="glass rounded-xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <Boxes className="h-4 w-4 text-cyan-400" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <Boxes className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
                 关联产品线 ({team.products.length})
               </h3>
               <button
                 onClick={() => { setProductLinkError(null); setLinkProductIds([]); setIsProductModalOpen(true); }}
-                className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold"
+                className="text-xs text-cyan-600 dark:text-cyan-400 hover:underline font-semibold"
               >
                 关联产品线
               </button>
@@ -533,14 +533,14 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
             ) : (
               <div className="space-y-3 text-xs">
                 {team.products.map((product: any) => (
-                  <div key={product.id} className="bg-black/10 border border-border/30 rounded-xl p-3 flex items-center justify-between gap-3">
+                  <div key={product.id} className="bg-muted/40 border border-border/60 rounded-xl p-3 flex items-center justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <Link href="/product-catalog" className="font-bold text-white hover:text-cyan-300 transition-colors block truncate">
+                      <Link href="/product-catalog" className="font-bold text-slate-900 dark:text-white hover:text-cyan-600 dark:hover:text-cyan-300 transition-colors block truncate">
                         {product.name}
                       </Link>
                       <p className="mt-1 truncate text-[10px] text-muted-foreground">{product.description || "暂无产品说明"}</p>
                     </div>
-                    <button onClick={() => handleUnlinkProduct(product.id)} className="rounded-lg p-1 text-muted-foreground hover:text-rose-400 hover:bg-rose-500/10 transition-colors shrink-0" title="取消产品线关联">
+                    <button onClick={() => handleUnlinkProduct(product.id)} className="rounded-lg p-1 text-muted-foreground hover:text-rose-500 hover:bg-rose-500/10 transition-colors shrink-0" title="取消产品线关联">
                       <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
@@ -549,15 +549,15 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
             )}
           </div>
 
-          <div className="glass rounded-xl p-6 space-y-4">
+          <div className="bg-card border border-border rounded-xl p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-sm font-semibold text-white uppercase tracking-wider flex items-center gap-1.5">
-                <FolderGit className="h-4 w-4 text-indigo-400" />
+              <h3 className="text-sm font-semibold text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
+                <FolderGit className="h-4 w-4 text-indigo-600 dark:text-indigo-400" />
                 关联项目 ({team.projects.length})
               </h3>
               <button
                 onClick={() => { setLinkError(null); setLinkProjectIds([]); setIsProjectModalOpen(true); }}
-                className="text-xs text-indigo-400 hover:text-indigo-300 font-semibold"
+                className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
               >
                 关联项目
               </button>
@@ -572,10 +572,10 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
                 {team.projects.map((proj: any) => (
                   <div
                     key={proj.id}
-                    className="bg-black/10 border border-border/30 rounded-xl p-3 flex items-center justify-between gap-3"
+                    className="bg-muted/40 border border-border/60 rounded-xl p-3 flex items-center justify-between gap-3"
                   >
                     <div className="min-w-0 flex-1 space-y-0.5">
-                      <span className="text-[9px] font-bold text-indigo-400 shrink-0 uppercase bg-indigo-500/10 px-1.5 py-0.5 rounded">
+                      <span className="text-[9px] font-bold text-indigo-600 dark:text-indigo-400 shrink-0 uppercase bg-indigo-500/10 px-1.5 py-0.5 rounded">
                         {proj.key}
                       </span>
                       <Link
@@ -609,8 +609,8 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
           <div className="glass w-full max-w-md rounded-2xl border border-border/80 bg-background/95 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-base font-bold text-white">指派小组固定成员</h3>
-              <button onClick={() => setIsMemberModalOpen(false)} className="text-muted-foreground hover:text-white">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">指派小组固定成员</h3>
+              <button onClick={() => setIsMemberModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -627,11 +627,11 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
                 <select
                   value={memberUserId}
                   onChange={(e) => setMemberUserId(e.target.value)}
-                  className="w-full rounded-lg border border-border bg-input py-2 px-3 text-white focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-input py-2 px-3 text-foreground focus:outline-none"
                 >
                   <option value="">请选择人员...</option>
                   {candidateFixedUsers.map((u) => (
-                    <option key={u.id} value={u.id}>
+                    <option key={u.id} value={u.id} className="bg-popover text-popover-foreground">
                       {u.name} ({u.department || "无部门"})
                     </option>
                   ))}
@@ -643,10 +643,10 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
                 <select
                   value={memberRole}
                   onChange={(e) => setMemberRole(e.target.value as ProductLineRole)}
-                  className="w-full rounded-lg border border-border bg-input py-2 px-3 text-white focus:outline-none"
+                  className="w-full rounded-lg border border-border bg-input py-2 px-3 text-foreground focus:outline-none"
                 >
                   {Object.entries(roleLabels).map(([k, v]) => (
-                    <option key={k} value={k}>
+                    <option key={k} value={k} className="bg-popover text-popover-foreground">
                       {v}
                     </option>
                   ))}
@@ -657,7 +657,7 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
                 <button
                   type="button"
                   onClick={() => setIsMemberModalOpen(false)}
-                  className="rounded-lg border border-border bg-input py-2 px-4 text-xs font-medium text-white hover:bg-muted"
+                  className="rounded-lg border border-border bg-input py-2 px-4 text-xs font-medium text-foreground hover:bg-muted"
                 >
                   取消
                 </button>
@@ -829,8 +829,8 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-fade-in">
           <div className="glass w-full max-w-md rounded-2xl border border-border/80 bg-background/95 p-6 shadow-2xl space-y-4">
             <div className="flex items-center justify-between border-b border-border/40 pb-3">
-              <h3 className="text-base font-bold text-white">关联项目</h3>
-              <button onClick={() => setIsProjectModalOpen(false)} className="text-muted-foreground hover:text-white">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">关联项目</h3>
+              <button onClick={() => setIsProjectModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -845,22 +845,22 @@ export default function TeamDetailsClient({ team, allUsers, allProjects, allTeam
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-semibold text-muted-foreground">选择项目（可多选）*</label>
-                  <button type="button" onClick={() => setLinkProjectIds(linkProjectIds.length === candidateProjects.length ? [] : candidateProjects.map((project) => project.id))} className="text-[10px] font-semibold text-indigo-400 hover:text-indigo-300">
+                  <button type="button" onClick={() => setLinkProjectIds(linkProjectIds.length === candidateProjects.length ? [] : candidateProjects.map((project) => project.id))} className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 hover:underline">
                     {linkProjectIds.length === candidateProjects.length && candidateProjects.length > 0 ? "取消全选" : "全选"}
                   </button>
                 </div>
                 <div className="max-h-64 space-y-1 overflow-y-auto rounded-lg border border-border bg-input p-2">
-                  {candidateProjects.map((project) => <label key={project.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs text-slate-200 hover:bg-white/5"><input type="checkbox" checked={linkProjectIds.includes(project.id)} onChange={() => setLinkProjectIds((current) => current.includes(project.id) ? current.filter((id) => id !== project.id) : [...current, project.id])} className="h-3.5 w-3.5 accent-indigo-500" /><span className="shrink-0 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-bold text-indigo-300">{project.key}</span><span className="min-w-0 flex-1 truncate">{project.name}</span></label>)}
+                  {candidateProjects.map((project) => <label key={project.id} className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-xs text-foreground hover:bg-muted/50"><input type="checkbox" checked={linkProjectIds.includes(project.id)} onChange={() => setLinkProjectIds((current) => current.includes(project.id) ? current.filter((id) => id !== project.id) : [...current, project.id])} className="h-3.5 w-3.5 accent-indigo-500" /><span className="shrink-0 rounded bg-indigo-500/10 px-1.5 py-0.5 text-[9px] font-bold text-indigo-600 dark:text-indigo-300">{project.key}</span><span className="min-w-0 flex-1 truncate">{project.name}</span></label>)}
                 </div>
                 {candidateProjects.length === 0 && <p className="text-[10px] text-muted-foreground">暂无可关联项目。</p>}
-                {linkProjectIds.length > 0 && <p className="text-[10px] text-indigo-300">已选择 {linkProjectIds.length} 个项目</p>}
+                {linkProjectIds.length > 0 && <p className="text-[10px] text-indigo-600 dark:text-indigo-300">已选择 {linkProjectIds.length} 个项目</p>}
               </div>
 
               <div className="flex items-center justify-end gap-2 pt-2 border-t border-border/40">
                 <button
                   type="button"
                   onClick={() => setIsProjectModalOpen(false)}
-                  className="rounded-lg border border-border bg-input py-2 px-4 text-xs font-medium text-white hover:bg-muted"
+                  className="rounded-lg border border-border bg-input py-2 px-4 text-xs font-medium text-foreground hover:bg-muted"
                 >
                   取消
                 </button>
