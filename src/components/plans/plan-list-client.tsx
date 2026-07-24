@@ -217,10 +217,90 @@ export default function PlanListClient({
       </select>
       <button disabled={isPending} className="rounded-lg border border-indigo-500/30 px-3 py-2 text-sm text-primary hover:bg-accent disabled:opacity-50 font-semibold">筛选</button>
     </form>
-    <div className="overflow-x-auto rounded-xl border border-border"><table className="w-full min-w-[1000px] text-left text-sm"><thead className="bg-white/5 text-xs text-muted-foreground"><tr><th className="px-4 py-3">周期</th><th className="px-4 py-3">产品线小组</th><th className="px-4 py-3">组长</th><th className="px-4 py-3">{quarterly ? "目标/风险" : "事项总数"}</th>{!quarterly && <><th className="px-4 py-3">风险</th><th className="px-4 py-3">资源需求</th></>}<th className="px-4 py-3">状态</th><th className="px-4 py-3">发布时间</th><th className="px-4 py-3">最后修改</th><th className="px-4 py-3">操作</th></tr></thead>
-      <tbody>{plans.length === 0 ? <tr><td colSpan={quarterly ? 8 : 10} className="px-4 py-12 text-center text-muted-foreground">暂无计划</td></tr> : plans.map((plan) => {
-        const total = Object.values(plan._count).reduce((sum, value) => sum + value, 0);
-        return <tr key={plan.id} className="border-t border-border"><td className="px-4 py-3 text-white">{plan.year}年 {quarterly ? `Q${plan.quarter}` : `${plan.month}月`}</td><td className="px-4 py-3">{plan.productLineTeam.name}</td><td className="px-4 py-3">{plan.productLineTeam.members.map((member) => member.user.name).join("、") || "—"}</td><td className="px-4 py-3">{quarterly ? `${plan._count.goals ?? 0} / ${plan._count.risks ?? 0}` : total}</td>{!quarterly && <><td className="px-4 py-3">{plan._count.risks ?? 0}</td><td className="px-4 py-3">{plan._count.resourceRequests ?? 0}</td></>}<td className="px-4 py-3">{planPublicationStatusLabels[plan.status]}</td><td className="px-4 py-3">{plan.publishedAt ? format(new Date(plan.publishedAt), "yyyy-MM-dd HH:mm") : "—"}</td><td className="px-4 py-3">{format(new Date(plan.updatedAt), "yyyy-MM-dd HH:mm")}</td><td className="px-4 py-3"><div className="flex items-center gap-2"><Link href={`/plans/${tab}/${plan.id}`} title="查看" className="hover:text-indigo-400 transition-colors"><Eye className="h-4 w-4" /></Link><Link href={`/plans/${tab}/${plan.id}/edit`} title="编辑" className="hover:text-indigo-400 transition-colors"><Pencil className="h-4 w-4" /></Link><button onClick={() => handleDelete(plan.id)} title="删除" className="text-red-500 hover:text-red-400 transition-colors"><Trash2 className="h-4 w-4" /></button></div></td></tr>;
-      })}</tbody></table></div>
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
+      <table className="w-full min-w-[1000px] text-left text-sm">
+        <thead className="bg-muted/40 text-xs font-bold uppercase text-slate-900 dark:text-white border-b border-border">
+          <tr>
+            <th className="px-4 py-3">周期</th>
+            <th className="px-4 py-3">产品线小组</th>
+            <th className="px-4 py-3">组长</th>
+            <th className="px-4 py-3">{quarterly ? "目标/风险" : "事项总数"}</th>
+            {!quarterly && (
+              <>
+                <th className="px-4 py-3">风险</th>
+                <th className="px-4 py-3">资源需求</th>
+              </>
+            )}
+            <th className="px-4 py-3">状态</th>
+            <th className="px-4 py-3">发布时间</th>
+            <th className="px-4 py-3">最后修改</th>
+            <th className="px-4 py-3">操作</th>
+          </tr>
+        </thead>
+        <tbody className="divide-y divide-border/60">
+          {plans.length === 0 ? (
+            <tr>
+              <td colSpan={quarterly ? 8 : 10} className="px-4 py-12 text-center text-muted-foreground">
+                暂无计划
+              </td>
+            </tr>
+          ) : (
+            plans.map((plan) => {
+              const total = Object.values(plan._count).reduce((sum, value) => sum + value, 0);
+              return (
+                <tr key={plan.id} className="transition-colors hover:bg-muted/10">
+                  <td className="px-4 py-3 font-semibold text-slate-900 dark:text-white">
+                    {plan.year}年 {quarterly ? `Q${plan.quarter}` : `${plan.month}月`}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-100">
+                    {plan.productLineTeam.name}
+                  </td>
+                  <td className="px-4 py-3 text-slate-700 dark:text-slate-300">
+                    {plan.productLineTeam.members.map((member) => member.user.name).join("、") || "—"}
+                  </td>
+                  <td className="px-4 py-3 font-medium text-slate-900 dark:text-slate-200">
+                    {quarterly ? `${plan._count.goals ?? 0} / ${plan._count.risks ?? 0}` : total}
+                  </td>
+                  {!quarterly && (
+                    <>
+                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{plan._count.risks ?? 0}</td>
+                      <td className="px-4 py-3 text-slate-700 dark:text-slate-300">{plan._count.resourceRequests ?? 0}</td>
+                    </>
+                  )}
+                  <td className="px-4 py-3 font-medium">
+                    <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
+                      plan.status === "PUBLISHED" 
+                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
+                        : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                    }`}>
+                      {planPublicationStatusLabels[plan.status]}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {plan.publishedAt ? format(new Date(plan.publishedAt), "yyyy-MM-dd HH:mm") : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-xs text-muted-foreground">
+                    {format(new Date(plan.updatedAt), "yyyy-MM-dd HH:mm")}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-2">
+                      <Link href={`/plans/${tab}/${plan.id}`} title="查看" className="text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        <Eye className="h-4 w-4" />
+                      </Link>
+                      <Link href={`/plans/${tab}/${plan.id}/edit`} title="编辑" className="text-muted-foreground hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
+                        <Pencil className="h-4 w-4" />
+                      </Link>
+                      <button onClick={() => handleDelete(plan.id)} title="删除" className="text-red-500 hover:text-red-400 transition-colors">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })
+          )}
+        </tbody>
+      </table>
+    </div>
   </div>;
 }
