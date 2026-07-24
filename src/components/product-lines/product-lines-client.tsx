@@ -30,7 +30,7 @@ export default function ProductLinesClient({ initialTeams }: ProductLinesClientP
             placeholder="搜索小组名称/核心职责..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-lg border border-border bg-input py-1.5 pl-9 pr-4 text-xs text-white placeholder-muted-foreground focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-border bg-input py-1.5 pl-9 pr-4 text-xs text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none"
           />
         </div>
 
@@ -43,10 +43,10 @@ export default function ProductLinesClient({ initialTeams }: ProductLinesClientP
         </button>
       </div>
 
-      {/* 小组卡片网格 */}
+      {/* 小组列表 */}
       {filteredTeams.length === 0 ? (
-        <div className="glass rounded-xl p-16 text-center text-muted-foreground">
-          未筛选到符合条件的产品线研发小组。
+        <div className="glass rounded-xl p-12 text-center text-muted-foreground">
+          暂无匹配的产品线研发小组信息。
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
@@ -64,8 +64,8 @@ export default function ProductLinesClient({ initialTeams }: ProductLinesClientP
               >
                 <div className="space-y-2.5">
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-extrabold text-white text-base truncate">{team.name}</h3>
-                    <span className="shrink-0 rounded px-1.5 py-0.5 bg-indigo-500/10 text-indigo-400 text-[9px] font-bold uppercase tracking-wider flex items-center gap-0.5">
+                    <h3 className="font-extrabold text-slate-900 dark:text-white text-base truncate">{team.name}</h3>
+                    <span className="shrink-0 rounded px-1.5 py-0.5 bg-indigo-500/10 text-indigo-500 dark:text-indigo-400 text-[9px] font-bold uppercase tracking-wider flex items-center gap-0.5">
                       <Layers className="h-3 w-3" />
                       产品线
                     </span>
@@ -77,18 +77,18 @@ export default function ProductLinesClient({ initialTeams }: ProductLinesClientP
                 </div>
 
                 {/* 团队统计 */}
-                <div className="grid grid-cols-3 gap-2 bg-black/10 rounded-xl p-3 border border-border/30 text-center text-[10px]">
+                <div className="grid grid-cols-3 gap-2 bg-muted/40 dark:bg-black/10 rounded-xl p-3 border border-border/30 text-center text-[10px]">
                   <div>
                     <span className="text-muted-foreground block uppercase text-[8px] font-semibold tracking-wider">组长</span>
-                    <span className="text-white font-bold block mt-1 truncate">{leaderName}</span>
+                    <span className="text-slate-900 dark:text-white font-bold block mt-1 truncate">{leaderName}</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block uppercase text-[8px] font-semibold tracking-wider">固定班底</span>
-                    <span className="text-white font-bold block mt-1 font-mono">{fixedCount}人</span>
+                    <span className="text-slate-900 dark:text-white font-bold block mt-1 font-mono">{fixedCount}人</span>
                   </div>
                   <div>
                     <span className="text-muted-foreground block uppercase text-[8px] font-semibold tracking-wider">临时借调</span>
-                    <span className="text-indigo-400 font-bold block mt-1 font-mono">+{secondmentCount}人</span>
+                    <span className="text-indigo-600 dark:text-indigo-400 font-bold block mt-1 font-mono">+{secondmentCount}人</span>
                   </div>
                 </div>
 
@@ -96,11 +96,11 @@ export default function ProductLinesClient({ initialTeams }: ProductLinesClientP
                 <div className="space-y-1.5 text-[10px]">
                   <span className="text-muted-foreground uppercase text-[8px] font-semibold tracking-wider">承接研发项目 ({team.projects.length})</span>
                   {team.projects.length === 0 ? (
-                    <p className="italic text-gray-600">暂无项目归属</p>
+                    <p className="italic text-muted-foreground">暂无项目归属</p>
                   ) : (
                     <div className="flex flex-wrap gap-1.5 max-h-16 overflow-y-auto">
                       {team.projects.map((p: any) => (
-                        <span key={p.id} className="rounded bg-input/60 border border-border/40 px-2 py-0.5 text-white">
+                        <span key={p.id} className="rounded bg-input/60 border border-border/40 px-2 py-0.5 text-foreground">
                           [{p.key}] {p.name.slice(0, 10)}
                         </span>
                       ))}
@@ -111,10 +111,10 @@ export default function ProductLinesClient({ initialTeams }: ProductLinesClientP
                 {/* 进入配置详情 */}
                 <Link
                   href={`/product-lines/${team.id}`}
-                  className="w-full text-center inline-flex items-center justify-center gap-1 text-xs font-bold rounded-lg border border-border bg-input py-2 text-white hover:bg-muted transition-colors"
+                  className="w-full text-center inline-flex items-center justify-center gap-1 text-xs font-bold rounded-lg border border-border bg-input py-2 text-slate-900 dark:text-white hover:bg-muted transition-colors"
                 >
                   小组成员管理与临时借调
-                  <ChevronRight className="h-3.5 w-3.5 text-indigo-400" />
+                  <ChevronRight className="h-3.5 w-3.5 text-indigo-500 dark:text-indigo-400" />
                 </Link>
 
               </div>

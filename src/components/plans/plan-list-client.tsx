@@ -152,7 +152,7 @@ export default function PlanListClient({
 
   return <div className="space-y-6 animate-fade-in">
     <div className="flex items-center justify-between gap-4">
-      <div><h1 className="flex items-center gap-2 text-2xl font-bold text-white"><CalendarRange className="h-6 w-6 text-indigo-400" />计划管理</h1><p className="mt-1 text-sm text-muted-foreground">季度里程碑与月度项目经营计划独立管理</p></div>
+      <div><h1 className="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white"><CalendarRange className="h-6 w-6 text-indigo-600 dark:text-indigo-400" />计划管理</h1><p className="mt-1 text-sm text-muted-foreground">季度里程碑与月度项目经营计划独立管理</p></div>
       <div className="flex items-center gap-2">
         <button
           onClick={() => {
@@ -190,9 +190,9 @@ export default function PlanListClient({
             required
             placeholder="年度"
             defaultValue={defaultYear || new Date().getFullYear()}
-            className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-white"
+            className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
           />
-          <select name="period" defaultValue={defaultPeriod || ""} className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-white">
+          <select name="period" defaultValue={defaultPeriod || ""} className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground">
             <option value="">全部季度</option>
             {Array.from({ length: 4 }, (_, i) => <option key={i + 1} value={i + 1}>{`Q${i + 1}`}</option>)}
           </select>
@@ -204,18 +204,18 @@ export default function PlanListClient({
             type="month"
             name="yearMonth"
             defaultValue={defaultYear && defaultPeriod ? `${defaultYear}-${String(defaultPeriod).padStart(2, '0')}` : ""}
-            className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-white"
+            className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground"
           />
           {teamDropdown}
         </>
       )}
 
-      <select name="status" defaultValue={defaultStatus || ""} className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-white">
+      <select name="status" defaultValue={defaultStatus || ""} className="rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground">
         <option value="">全部状态</option>
         <option value="DRAFT">草稿</option>
         <option value="PUBLISHED">已发布</option>
       </select>
-      <button disabled={isPending} className="rounded-lg border border-indigo-500/30 px-3 py-2 text-sm text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-50">筛选</button>
+      <button disabled={isPending} className="rounded-lg border border-indigo-500/30 px-3 py-2 text-sm text-primary hover:bg-accent disabled:opacity-50 font-semibold">筛选</button>
     </form>
     <div className="overflow-x-auto rounded-xl border border-border"><table className="w-full min-w-[1000px] text-left text-sm"><thead className="bg-white/5 text-xs text-muted-foreground"><tr><th className="px-4 py-3">周期</th><th className="px-4 py-3">产品线小组</th><th className="px-4 py-3">组长</th><th className="px-4 py-3">{quarterly ? "目标/风险" : "事项总数"}</th>{!quarterly && <><th className="px-4 py-3">风险</th><th className="px-4 py-3">资源需求</th></>}<th className="px-4 py-3">状态</th><th className="px-4 py-3">发布时间</th><th className="px-4 py-3">最后修改</th><th className="px-4 py-3">操作</th></tr></thead>
       <tbody>{plans.length === 0 ? <tr><td colSpan={quarterly ? 8 : 10} className="px-4 py-12 text-center text-muted-foreground">暂无计划</td></tr> : plans.map((plan) => {

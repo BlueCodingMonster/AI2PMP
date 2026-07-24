@@ -130,7 +130,7 @@ export default function TeamClient({ members, currentUser }: TeamClientProps) {
           onClick={() => setStatsOpen(!statsOpen)}
           className="flex w-full items-center justify-between p-5 text-left"
         >
-          <h2 className="text-sm font-semibold text-white flex items-center gap-2 font-sans">
+          <h2 className="text-sm font-semibold text-slate-900 dark:text-white flex items-center gap-2 font-sans">
             <span className="h-2 w-2 rounded-full bg-indigo-500" />
             团队人员构成分析
           </h2>
@@ -160,7 +160,7 @@ export default function TeamClient({ members, currentUser }: TeamClientProps) {
                         <div key={dept.name} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                            <span className="text-white font-medium">{dept.name}</span>
+                            <span className="text-slate-900 dark:text-white font-medium">{dept.name}</span>
                           </div>
                           <span className="text-muted-foreground">{dept.count}人 ({percentage}%)</span>
                         </div>
@@ -184,7 +184,7 @@ export default function TeamClient({ members, currentUser }: TeamClientProps) {
                         <div key={pos.name} className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                            <span className="text-white font-medium truncate" title={pos.name}>{pos.name}</span>
+                            <span className="text-slate-900 dark:text-white font-medium truncate" title={pos.name}>{pos.name}</span>
                           </div>
                           <span className="text-muted-foreground shrink-0">{pos.count}人 ({percentage}%)</span>
                         </div>
@@ -207,7 +207,7 @@ export default function TeamClient({ members, currentUser }: TeamClientProps) {
             placeholder="搜索成员姓名、登录名或部门..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full rounded-lg border border-border bg-input py-2 pl-10 pr-4 text-xs text-white placeholder-muted-foreground focus:border-primary focus:outline-none"
+            className="w-full rounded-lg border border-border bg-input py-2 pl-10 pr-4 text-xs text-slate-900 dark:text-white placeholder-muted-foreground focus:border-primary focus:outline-none"
           />
         </div>
 
@@ -258,7 +258,7 @@ export default function TeamClient({ members, currentUser }: TeamClientProps) {
                           {initials}
                         </div>
                         <div>
-                          <span className="font-bold text-white block">{member.name}</span>
+                          <span className="font-bold text-slate-900 dark:text-white block">{member.name}</span>
                         </div>
                       </div>
                     </td>

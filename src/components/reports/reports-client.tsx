@@ -42,7 +42,7 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
           </div>
           <div>
             <span className="text-[10px] text-muted-foreground uppercase">累计登记工时</span>
-            <div className="text-xl font-bold text-white mt-0.5">{totalHours} <span className="text-xs font-normal text-muted-foreground">小时</span></div>
+            <div className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">{totalHours} <span className="text-xs font-normal text-muted-foreground">小时</span></div>
           </div>
         </div>
 
@@ -53,7 +53,7 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
           </div>
           <div>
             <span className="text-[10px] text-muted-foreground uppercase">覆盖项目总数</span>
-            <div className="text-xl font-bold text-white mt-0.5">{projectCount} <span className="text-xs font-normal text-muted-foreground">个</span></div>
+            <div className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">{projectCount} <span className="text-xs font-normal text-muted-foreground">个</span></div>
           </div>
         </div>
 
@@ -64,7 +64,7 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
           </div>
           <div>
             <span className="text-[10px] text-muted-foreground uppercase">近7天日均登记</span>
-            <div className="text-xl font-bold text-white mt-0.5">{averageDailyHours} <span className="text-xs font-normal text-muted-foreground">小时</span></div>
+            <div className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">{averageDailyHours} <span className="text-xs font-normal text-muted-foreground">小时</span></div>
           </div>
         </div>
       </div>
@@ -75,7 +75,7 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
         <div className="space-y-6 lg:col-span-2">
           {/* 7天走势图 */}
           <div className="glass rounded-xl p-6 space-y-4">
-            <h3 className="text-base font-semibold text-white flex items-center gap-2">
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white flex items-center gap-2">
               <Calendar className="h-4 w-4 text-indigo-400" />
               近 7 天开发工时登记走势 (小时)
             </h3>
@@ -150,7 +150,7 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
 
           {/* 最近 10 条登账明细 */}
           <div className="glass rounded-xl p-6 space-y-4">
-            <h3 className="text-base font-semibold text-white">最新登账记录日志</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">最新登账记录日志</h3>
 
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
@@ -174,11 +174,11 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
                   ) : (
                     recentLogs.map((log) => (
                       <tr key={log.id} className="hover:bg-muted/10 transition-all">
-                        <td className="p-3 font-semibold text-white">{log.user.name}</td>
+                        <td className="p-3 font-semibold text-slate-900 dark:text-white">{log.user.name}</td>
                         <td className="p-3 text-muted-foreground uppercase font-bold text-[10px]">
                           [{log.task.project.key}]
                         </td>
-                        <td className="p-3 font-medium text-white max-w-[150px] truncate">
+                        <td className="p-3 font-medium text-slate-900 dark:text-white max-w-[150px] truncate">
                           {log.task.title}
                         </td>
                         <td className="p-3 text-muted-foreground max-w-[150px] truncate">
@@ -200,7 +200,7 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
         {/* 右侧：项目工时分布环形图与列表 */}
         <div className="space-y-6">
           <div className="glass rounded-xl p-6 space-y-6">
-            <h3 className="text-base font-semibold text-white">项目工时占比统计</h3>
+            <h3 className="text-base font-semibold text-slate-900 dark:text-white">项目工时占比统计</h3>
 
             {/* 环形图展示 */}
             {projectCount === 0 ? (
@@ -245,7 +245,7 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
                   {/* 中心文字标签 */}
                   <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                     <span className="text-[9px] text-muted-foreground uppercase font-bold">总工时</span>
-                    <span className="text-sm font-extrabold text-white font-mono">{totalHours}h</span>
+                    <span className="text-sm font-extrabold text-slate-900 dark:text-white font-mono">{totalHours}h</span>
                   </div>
                 </div>
 
@@ -261,7 +261,7 @@ export default function ReportsClient({ summary }: ReportsClientProps) {
                         <div className="flex items-center justify-between font-medium">
                           <div className="flex items-center gap-1.5">
                             <span className={`h-2.5 w-2.5 rounded-full ${barColor}`} />
-                            <span className="text-white font-semibold truncate max-w-[120px]">
+                            <span className="text-slate-900 dark:text-white font-semibold truncate max-w-[120px]">
                               [{proj.key}] {proj.name}
                             </span>
                           </div>
