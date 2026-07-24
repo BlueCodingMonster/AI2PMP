@@ -291,7 +291,13 @@ export default function ProjectLedgerManager({
             {filtered.map((item) => (
               <div
                 key={item.id}
-                className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 transition ${item.id === selected?.id && mode !== "create" ? "bg-cyan-500/15 ring-1 ring-cyan-500/30 font-semibold" : item.warrantyExpired ? "bg-red-500/[0.08] text-foreground ring-1 ring-red-500/30 hover:bg-red-500/10" : "text-foreground hover:bg-muted"}`}
+                className={`group flex items-center gap-1 rounded-lg px-2 py-1.5 transition ${
+                  item.id === selected?.id && mode !== "create"
+                    ? "bg-blue-50/90 border border-blue-200/80 shadow-xs dark:bg-blue-950/40 dark:border-blue-800/60 font-semibold"
+                    : item.warrantyExpired
+                    ? "bg-rose-50/80 text-foreground border border-rose-200/70 dark:bg-rose-950/30 dark:border-rose-900/40 hover:bg-rose-100/80"
+                    : "text-foreground hover:bg-muted border border-transparent"
+                }`}
               >
                 <button
                   onClick={() => {
@@ -301,21 +307,21 @@ export default function ProjectLedgerManager({
                   }}
                   className="flex min-w-0 flex-1 items-center gap-2 py-1 text-left"
                 >
-                  <FolderKanban className={`h-4 w-4 shrink-0 ${item.id === selected?.id && mode !== "create" ? "text-cyan-600 dark:text-cyan-300" : "text-slate-500"}`} />
+                  <FolderKanban className={`h-4 w-4 shrink-0 ${item.id === selected?.id && mode !== "create" ? "text-[#0066CC] dark:text-cyan-300" : "text-slate-500"}`} />
                   <span className="min-w-0 flex-1">
-                    <span className={`block truncate text-xs ${item.id === selected?.id && mode !== "create" ? "font-bold text-cyan-900 dark:text-cyan-100" : "font-medium text-foreground"}`}>
+                    <span className={`block truncate text-xs ${item.id === selected?.id && mode !== "create" ? "font-bold text-blue-950 dark:text-cyan-100" : "font-medium text-foreground"}`}>
                       {item.name}
                     </span>
-                    <span className={`block truncate text-[10px] ${item.id === selected?.id && mode !== "create" ? "text-cyan-700 dark:text-cyan-300" : "text-muted-foreground"}`}>
+                    <span className={`block truncate text-[10px] ${item.id === selected?.id && mode !== "create" ? "text-blue-700 dark:text-cyan-300" : "text-muted-foreground"}`}>
                       {item.key} · {item.customerName}
                     </span>
                   </span>
-                  <span className={`rounded px-1.5 py-0.5 text-[10px] ${item.id === selected?.id && mode !== "create" ? "bg-cyan-500/20 text-cyan-900 dark:text-cyan-100 font-bold" : "bg-muted text-muted-foreground font-medium"}`}>
+                  <span className={`rounded px-1.5 py-0.5 text-[10px] ${item.id === selected?.id && mode !== "create" ? "bg-blue-100/90 text-blue-800 dark:bg-cyan-500/20 dark:text-cyan-100 font-bold" : "bg-muted text-muted-foreground font-medium"}`}>
                     {item.versions.length}
                   </span>
                 </button>
                 {item.warrantyExpired && (
-                  <span className="shrink-0 rounded border border-red-500/30 bg-red-500/15 px-1.5 py-0.5 text-[9px] font-bold text-red-700 dark:text-red-300">
+                  <span className="shrink-0 rounded border border-rose-200 bg-rose-100 px-1.5 py-0.5 text-[9px] font-bold text-rose-800 dark:border-rose-800/50 dark:bg-rose-900/40 dark:text-rose-200">
                     质保已过期
                   </span>
                 )}

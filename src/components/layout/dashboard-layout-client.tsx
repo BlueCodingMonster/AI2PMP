@@ -160,10 +160,10 @@ export default function DashboardLayoutClient({
               <SdlcIcon size={32} colored={true} />
             </div>
             <div className={`${isCollapsed ? "lg:hidden" : "block"} transition-opacity duration-200`}>
-              <span className="text-lg font-bold tracking-tight text-white leading-none block whitespace-nowrap">
+              <span className="text-lg font-bold tracking-tight text-foreground dark:text-white leading-none block whitespace-nowrap">
                 SDLC
               </span>
-              <span className="text-[10px] text-indigo-300/70 font-medium tracking-tight leading-none block mt-0.5 whitespace-nowrap">
+              <span className="text-[10px] text-muted-foreground dark:text-indigo-300/70 font-medium tracking-tight leading-none block mt-0.5 whitespace-nowrap">
                 研发效能平台
               </span>
             </div>
@@ -289,19 +289,19 @@ export default function DashboardLayoutClient({
                       }
                       ${
                         active
-                          ? "bg-gradient-to-r from-indigo-600/25 to-purple-600/15 text-indigo-600 dark:text-white shadow-sm font-semibold border border-indigo-500/30"
+                          ? "bg-blue-50/90 text-[#0066CC] border border-blue-200/80 shadow-xs font-semibold dark:bg-gradient-to-r dark:from-indigo-600/25 dark:to-purple-600/15 dark:text-white dark:border-indigo-500/30"
                           : "text-sidebar-foreground hover:bg-accent hover:text-foreground"
                       }
                     `}
                   >
                     {/* 激活指示条 (仅在展开模式显示) */}
                     {active && !isCollapsed && (
-                      <div className="absolute left-0 h-5 w-1 rounded-r-full bg-sidebar-active" />
+                      <div className="absolute left-0 h-5 w-1 rounded-r-full bg-[#0066CC] dark:bg-sidebar-active" />
                     )}
                     <item.icon
                       className={`h-5 w-5 shrink-0 transition-colors ${
                         active
-                          ? "text-indigo-600 dark:text-indigo-400"
+                          ? "text-[#0066CC] dark:text-indigo-400"
                           : "text-muted-foreground group-hover:text-foreground"
                       }`}
                     />
