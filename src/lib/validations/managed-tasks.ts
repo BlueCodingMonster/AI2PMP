@@ -65,8 +65,6 @@ export const managedTaskSchema = z.object({
   if (start && end && end < start) context.addIssue({ code: z.ZodIssueCode.custom, path: ["planEndDate"], message: "计划结束日期不能早于计划开始日期" });
   const actualStart = data.actualStartAt ? new Date(data.actualStartAt) : null;
   const actualFinish = data.actualFinishAt ? new Date(data.actualFinishAt) : null;
-  if (actualStart && actualStart > new Date()) context.addIssue({ code: z.ZodIssueCode.custom, path: ["actualStartAt"], message: "实际开始时间不能晚于当前时间" });
-  if (actualFinish && actualFinish > new Date()) context.addIssue({ code: z.ZodIssueCode.custom, path: ["actualFinishAt"], message: "实际完成时间不能晚于当前时间" });
   if (actualStart && actualFinish && actualFinish < actualStart) context.addIssue({ code: z.ZodIssueCode.custom, path: ["actualFinishAt"], message: "实际完成时间不能早于实际开始时间" });
   if (Boolean(data.monthlyItemType) !== Boolean(data.monthlyItemId)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["monthlyItemId"], message: "月度计划事项类型和事项需要同时选择" });
   if (Boolean(data.versionType) !== Boolean(data.versionId)) context.addIssue({ code: z.ZodIssueCode.custom, path: ["versionId"], message: "版本类型和版本需要同时选择" });

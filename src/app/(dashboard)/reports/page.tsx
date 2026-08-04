@@ -1,12 +1,12 @@
 import { getTimeLogsSummary } from "@/actions/timelogs";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import ReportsClient from "@/components/reports/reports-client";
+import ReportsTabs from "@/components/reports/reports-tabs";
 import { BarChart3 } from "lucide-react";
 
 export const metadata = {
   title: "SDLC · 报表统计",
-  description: "SDLC · 研发效能平台 - 项目工时分析与统计报表",
+  description: "SDLC · 研发效能平台 - 项目工时与人员工时统计报表",
 };
 
 export default async function ReportsPage() {
@@ -38,12 +38,12 @@ export default async function ReportsPage() {
           <h1 className="text-2xl font-bold tracking-tight text-white">研发报表统计</h1>
         </div>
         <p className="mt-1 text-sm text-muted-foreground">
-          汇总团队开发工时登记，以项目工时占比环形图和近7日研发登记走势图直观展示项目资源投入。
+          汇总团队开发工时登记，支持按周、月维度统计人员计划与实际工时，及穿透查看一级任务明细。
         </p>
       </div>
 
-      {/* 报表统计展示客户端组件 */}
-      <ReportsClient summary={result.data} />
+      {/* 报表统计展示客户端容器组件 */}
+      <ReportsTabs summary={result.data} />
     </div>
   );
 }

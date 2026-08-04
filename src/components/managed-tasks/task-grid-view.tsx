@@ -1,7 +1,10 @@
 "use client";
 
+import { ExecutorPickerModal } from "./executor-picker-modal";
 import { useState, useTransition, useMemo, memo, useEffect, useRef, useCallback } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -16,8 +19,21 @@ import {
   FileText,
   Activity,
   Percent,
+  CornerUpLeft,
+  CornerDownRight,
+  Copy,
+  Lock,
 } from "lucide-react";
-import { createManagedTask, updateManagedTask } from "@/actions/managed-tasks";
+import {
+  createManagedTask,
+  updateManagedTask,
+  patchManagedTaskFields,
+  copyManagedTask,
+  indentManagedTask,
+  moveTaskDown,
+  moveTaskUp,
+  outdentManagedTask,
+} from "@/actions/managed-tasks";
 
 export type IdName = { id: string; name: string };
 export type VersionOption = { id: string; label: string };
@@ -53,6 +69,7 @@ export type TaskItem = {
   notes: string | null;
   children: Array<{ id: string }>;
   isDraft?: boolean;
+  canManage?: boolean;
 };
 
 export type Context = {
@@ -104,13 +121,13 @@ const statusBadgeColors: Record<string, string> = {
   CANCELLED: "bg-rose-500/15 text-rose-700 dark:text-rose-400 border-rose-500/30",
 };
 
-// Convert ISO string to datetime-local format (YYYY-MM-DDTHH:mm)
-function formatToDatetimeLocal(dateStr: string | null): string {
+// Convert ISO string to date input format (YYYY-MM-DD)
+function formatToDateString(dateStr: string | null): string {
   if (!dateStr) return "";
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return "";
   const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
 const cellInputClass =
@@ -118,137 +135,49 @@ const cellInputClass =
 const cellSelectClass =
   "w-full rounded border border-transparent bg-transparent px-1 py-1 text-xs text-foreground cursor-pointer transition focus:border-indigo-500 focus:bg-input focus:outline-none hover:bg-white/[0.04]";
 
-// 行内 Autocomplete 负责人选择器：小组成员优先、支持打字搜索
-const ExecutorAutocomplete = memo(function ExecutorAutocomplete({
+export function ExecutorAutocomplete({
   value,
   teamId,
   context,
+  disabled,
   onChange,
 }: {
   value: string | null;
-  teamId: string;
+  teamId?: string;
   context: Context;
+  disabled?: boolean;
   onChange: (userId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
-
-  // 当前选中的用户名
   const selectedUser = context.users.find((u) => u.id === value);
-  const displayName = selectedUser ? selectedUser.name : "";
-
-  // 点击外部关闭下拉
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [open]);
-
-  // 小组成员 ID 集合
-  const teamMemberIds = useMemo(() => {
-    const team = context.teams.find((t) => t.id === teamId);
-    if (!team) return new Set<string>();
-    return new Set(team.members.map((m) => m.userId));
-  }, [context.teams, teamId]);
-
-  // 分组 & 搜索过滤后的用户列表
-  const { teamUsers, otherUsers } = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    const filtered = q
-      ? context.users.filter((u) => u.name.toLowerCase().includes(q))
-      : context.users;
-    const team: typeof filtered = [];
-    const other: typeof filtered = [];
-    filtered.forEach((u) => {
-      if (teamMemberIds.has(u.id)) team.push(u);
-      else other.push(u);
-    });
-    return { teamUsers: team, otherUsers: other };
-  }, [context.users, teamMemberIds, search]);
-
-  const handleSelect = useCallback((userId: string) => {
-    onChange(userId);
-    setOpen(false);
-    setSearch("");
-  }, [onChange]);
 
   return (
-    <div ref={containerRef} className="relative w-full">
-      <input
-        ref={inputRef}
-        value={open ? search : displayName}
-        placeholder="-- 未分配 --"
-        onChange={(e) => setSearch(e.target.value)}
-        onFocus={() => { setOpen(true); setSearch(""); }}
-        className={`${cellInputClass} cursor-pointer`}
-      />
+    <>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => !disabled && setOpen(true)}
+        className={`${cellInputClass} text-left flex items-center justify-between transition ${
+          disabled ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : "cursor-pointer hover:border-indigo-500/50"
+        } ${selectedUser ? "font-medium text-foreground" : "text-muted-foreground/60"}`}
+      >
+        <span className="truncate">{selectedUser ? selectedUser.name : "-- 未分配 --"}</span>
+        {!disabled && <User className="h-3 w-3 text-muted-foreground/40 shrink-0 ml-1" />}
+      </button>
+
       {open && (
-        <div className="absolute left-0 top-full z-50 mt-0.5 max-h-52 w-44 overflow-auto rounded-lg border border-border bg-card shadow-xl">
-          {/* 清空选项 */}
-          <button
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => handleSelect("")}
-            className="w-full px-2.5 py-1.5 text-left text-xs text-muted-foreground hover:bg-indigo-500/10 transition"
-          >
-            -- 未分配 --
-          </button>
-          {/* 本小组成员 */}
-          {teamUsers.length > 0 && (
-            <>
-              <div className="px-2.5 py-1 text-[10px] font-semibold text-indigo-400 bg-indigo-500/5 select-none">
-                本组成员
-              </div>
-              {teamUsers.map((u) => (
-                <button
-                  key={u.id}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleSelect(u.id)}
-                  className={`w-full px-2.5 py-1.5 text-left text-xs hover:bg-indigo-500/10 transition flex items-center gap-1.5 ${
-                    u.id === value ? "bg-indigo-500/15 text-indigo-400 font-semibold" : "text-foreground"
-                  }`}
-                >
-                  <span className="text-indigo-400">★</span> {u.name}
-                </button>
-              ))}
-            </>
-          )}
-          {/* 其他人员 */}
-          {otherUsers.length > 0 && (
-            <>
-              <div className="px-2.5 py-1 text-[10px] font-semibold text-muted-foreground/60 bg-white/[0.02] select-none">
-                其他人员
-              </div>
-              {otherUsers.map((u) => (
-                <button
-                  key={u.id}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleSelect(u.id)}
-                  className={`w-full px-2.5 py-1.5 text-left text-xs hover:bg-white/[0.06] transition ${
-                    u.id === value ? "bg-indigo-500/10 text-indigo-400 font-semibold" : "text-foreground"
-                  }`}
-                >
-                  👤 {u.name}
-                </button>
-              ))}
-            </>
-          )}
-          {teamUsers.length === 0 && otherUsers.length === 0 && (
-            <div className="px-2.5 py-2 text-xs text-muted-foreground/50 text-center">无匹配人员</div>
-          )}
-        </div>
+        <ExecutorPickerModal
+          isOpen={open}
+          onClose={() => setOpen(false)}
+          value={value}
+          teamId={teamId}
+          context={context}
+          onSelect={onChange}
+        />
       )}
-    </div>
+    </>
   );
-});
+}
 
 // High-performance memoized single row component
 const GridRow = memo(function GridRow({
@@ -263,6 +192,11 @@ const GridRow = memo(function GridRow({
   onFieldChange,
   onSaveDraft,
   onDiscardDraft,
+  onIndentTask,
+  onOutdentTask,
+  onCopyTask,
+  onMoveUpTask,
+  onMoveDownTask,
   savingTaskId,
   savedTaskId,
 }: {
@@ -275,8 +209,13 @@ const GridRow = memo(function GridRow({
   onCreateSubTask: (parentTask: TaskItem) => void;
   onRemove: (id: string) => void;
   onFieldChange: (task: TaskItem, fields: Partial<TaskItem>) => void;
-  onSaveDraft: (draftTask: TaskItem, title: string) => void;
+  onSaveDraft: (draftTask: TaskItem, title: string, createNextSubTask?: boolean) => void;
   onDiscardDraft: (draftTaskId: string) => void;
+  onIndentTask: (id: string) => void;
+  onOutdentTask: (id: string) => void;
+  onCopyTask: (id: string) => void;
+  onMoveUpTask: (id: string) => void;
+  onMoveDownTask: (id: string) => void;
   savingTaskId: string | null;
   savedTaskId: string | null;
 }) {
@@ -294,6 +233,32 @@ const GridRow = memo(function GridRow({
 
   const isSaving = savingTaskId === task.id;
   const isSaved = savedTaskId === task.id;
+  const canManage = task.canManage !== false;
+
+  // 通用单元格 Tab / Shift+Tab 横向快捷切栏处理
+  const handleKeyDownNavigation = (e: React.KeyboardEvent<HTMLElement>) => {
+    if (e.key === "Tab") {
+      e.preventDefault();
+      if (task.isDraft && titleDraft.trim() !== "") {
+        onSaveDraft(task, titleDraft.trim());
+      }
+      const currentEl = e.currentTarget;
+      const rowEl = currentEl.closest(".wbs-grid-row");
+      if (rowEl) {
+        const focusables = Array.from(
+          rowEl.querySelectorAll<HTMLElement>("input:not([disabled]), select:not([disabled]), button:not([disabled])")
+        );
+        const currentIndex = focusables.indexOf(currentEl);
+        if (e.shiftKey) {
+          const prev = focusables[currentIndex - 1];
+          if (prev) prev.focus();
+        } else {
+          const next = focusables[currentIndex + 1];
+          if (next) next.focus();
+        }
+      }
+    }
+  };
 
   // Combined value for monthly items
   const currentMonthlyVal = task.monthlyPlanId
@@ -343,28 +308,73 @@ const GridRow = memo(function GridRow({
   }, [context.monthlyItems, task.productLineTeam?.id, task.monthlyPlanId, task.monthlyItemType, task.monthlyItemId]);
 
   return (
-    <div className={`group flex border-b border-border/80 text-xs transition ${task.isDraft ? "bg-indigo-500/10 dark:bg-indigo-500/15" : "hover:bg-white/[0.02]"}`}>
+    <div className={`wbs-grid-row group flex border-b border-border/80 text-xs transition ${task.isDraft ? "bg-indigo-500/10 dark:bg-indigo-500/15" : "hover:bg-white/[0.02]"}`}>
       {/* 1. 操作列 */}
-      <div className="w-14 shrink-0 border-r border-border px-1.5 py-2 flex items-center justify-center gap-1 sticky left-0 z-10 bg-card group-hover:bg-card">
+      <div className="w-36 shrink-0 border-r border-border px-1 py-2 flex items-center justify-center gap-0.5 sticky left-0 z-10 bg-card group-hover:bg-card">
         {isSaving ? (
           <Loader2 className="h-3.5 w-3.5 animate-spin text-indigo-400" />
         ) : isSaved ? (
           <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />
+        ) : !canManage ? (
+          <span title="只读模式（您无权编辑此团队任务）" className="flex items-center gap-1 text-[10px] text-muted-foreground/50 select-none">
+            <Lock className="h-3.5 w-3.5 text-muted-foreground/40" /> 只读
+          </span>
         ) : (
           <>
-            {!task.isDraft && task.level < 3 && (
-              <button
-                title="增加本地子任务行"
-                onClick={() => onCreateSubTask(task)}
-                className="rounded p-0.5 text-indigo-400 hover:bg-indigo-500/20"
-              >
-                <Plus className="h-3.5 w-3.5" />
-              </button>
+            {!task.isDraft && (
+              <>
+                <button
+                  title="上移（与上方同级任务交换顺序）"
+                  onClick={() => onMoveUpTask(task.id)}
+                  className="rounded p-0.5 text-violet-400 hover:bg-violet-500/20 cursor-pointer"
+                >
+                  <ArrowUp className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  title="下移（与下方同级任务交换顺序）"
+                  onClick={() => onMoveDownTask(task.id)}
+                  className="rounded p-0.5 text-violet-400 hover:bg-violet-500/20 cursor-pointer"
+                >
+                  <ArrowDown className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  title="升级（提升为上级任务）"
+                  disabled={task.level <= 1}
+                  onClick={() => onOutdentTask(task.id)}
+                  className="rounded p-0.5 text-sky-400 hover:bg-sky-500/20 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <CornerUpLeft className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  title="降级（缩进为子任务）"
+                  disabled={task.level >= 3}
+                  onClick={() => onIndentTask(task.id)}
+                  className="rounded p-0.5 text-amber-400 hover:bg-amber-500/20 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  <CornerDownRight className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  title="复制此任务及分支"
+                  onClick={() => onCopyTask(task.id)}
+                  className="rounded p-0.5 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </button>
+                {task.level < 3 && (
+                  <button
+                    title="增加子任务"
+                    onClick={() => onCreateSubTask(task)}
+                    className="rounded p-0.5 text-indigo-400 hover:bg-indigo-500/20 cursor-pointer"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </>
             )}
             <button
               title={task.isDraft ? "撤销草稿行" : "删除任务"}
               onClick={() => (task.isDraft ? onDiscardDraft(task.id) : onRemove(task.id))}
-              className="rounded p-0.5 text-red-400 hover:bg-red-500/20"
+              className="rounded p-0.5 text-red-400 hover:bg-red-500/20 cursor-pointer"
             >
               <Trash2 className="h-3.5 w-3.5" />
             </button>
@@ -397,6 +407,7 @@ const GridRow = memo(function GridRow({
         <input
           autoFocus={task.isDraft}
           value={titleDraft}
+          disabled={!canManage}
           onChange={(e) => setTitleDraft(e.target.value)}
           onBlur={() => {
             if (task.isDraft) {
@@ -416,8 +427,7 @@ const GridRow = memo(function GridRow({
               e.preventDefault();
               if (task.isDraft) {
                 if (titleDraft.trim() !== "") {
-                  onSaveDraft(task, titleDraft.trim());
-                  onCreateSubTask(task);
+                  onSaveDraft(task, titleDraft.trim(), true);
                 } else {
                   onDiscardDraft(task.id);
                 }
@@ -429,9 +439,11 @@ const GridRow = memo(function GridRow({
                   onCreateSubTask(task);
                 }
               }
+            } else {
+              handleKeyDownNavigation(e);
             }
           }}
-          className={`${cellInputClass} font-medium ${task.isDraft ? "border-indigo-500/50 bg-indigo-500/10 placeholder:text-muted-foreground/50" : ""}`}
+          className={`${cellInputClass} font-medium ${task.isDraft ? "border-indigo-500/50 bg-indigo-500/10 placeholder:text-muted-foreground/50" : ""} ${!canManage ? "cursor-not-allowed text-muted-foreground/70" : ""}`}
           placeholder={task.isDraft ? "输入任务名称，按 Enter 保存..." : "输入任务名称..."}
         />
       </div>
@@ -440,10 +452,12 @@ const GridRow = memo(function GridRow({
       <div className="w-24 shrink-0 border-r border-border p-1 flex items-center justify-center">
         <select
           value={task.sdlcNode || ""}
+          disabled={!canManage}
           onChange={(e) => onFieldChange(task, { sdlcNode: e.target.value })}
+          onKeyDown={handleKeyDownNavigation}
           className={`${cellSelectClass} text-center ${
             task.sdlcNode ? sdlcBadgeColors[task.sdlcNode] || "" : ""
-          }`}
+          } ${!canManage ? "cursor-not-allowed opacity-70" : ""}`}
         >
           <option value="">-- 节点 --</option>
           {Object.entries(sdlcLabels).map(([key, label]) => (
@@ -460,6 +474,7 @@ const GridRow = memo(function GridRow({
           value={task.executorId}
           teamId={task.productLineTeam?.id || ""}
           context={context}
+          disabled={!canManage}
           onChange={(userId) => onFieldChange(task, { executorId: userId })}
         />
       </div>
@@ -468,13 +483,15 @@ const GridRow = memo(function GridRow({
       <div className="w-36 shrink-0 border-r border-border p-1 flex items-center">
         <input
           value={descDraft}
+          disabled={!canManage}
           onChange={(e) => setDescDraft(e.target.value)}
+          onKeyDown={handleKeyDownNavigation}
           onBlur={() => {
             if (!task.isDraft && descDraft !== (task.description || "")) {
               onFieldChange(task, { description: descDraft });
             }
           }}
-          className={cellInputClass}
+          className={`${cellInputClass} ${!canManage ? "cursor-not-allowed text-muted-foreground/70" : ""}`}
           placeholder="验收标准说明..."
         />
       </div>
@@ -482,53 +499,65 @@ const GridRow = memo(function GridRow({
       {/* 6. 计划开始时间 */}
       <div className="w-32 shrink-0 border-r border-border p-1 flex items-center">
         <input
-          type="datetime-local"
-          value={formatToDatetimeLocal(task.planStartDate)}
+          type="date"
+          value={formatToDateString(task.planStartDate)}
+          disabled={!canManage || hasChildren}
+          title={hasChildren ? "父任务计划时间由子任务自动汇总推导" : undefined}
           onChange={(e) => onFieldChange(task, { planStartDate: e.target.value })}
-          className={cellInputClass}
+          onKeyDown={handleKeyDownNavigation}
+          className={`${cellInputClass} ${hasChildren || !canManage ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
         />
       </div>
 
       {/* 7. 计划完成时间 */}
       <div className="w-32 shrink-0 border-r border-border p-1 flex items-center">
         <input
-          type="datetime-local"
-          value={formatToDatetimeLocal(task.planEndDate)}
+          type="date"
+          value={formatToDateString(task.planEndDate)}
+          disabled={!canManage || hasChildren}
+          title={hasChildren ? "父任务计划时间由子任务自动汇总推导" : undefined}
           onChange={(e) => onFieldChange(task, { planEndDate: e.target.value })}
-          className={cellInputClass}
+          onKeyDown={handleKeyDownNavigation}
+          className={`${cellInputClass} ${hasChildren || !canManage ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
         />
       </div>
 
       {/* 8. 实际开始时间 */}
       <div className="w-32 shrink-0 border-r border-border p-1 flex items-center">
         <input
-          type="datetime-local"
-          value={formatToDatetimeLocal(task.actualStartAt)}
+          type="date"
+          value={formatToDateString(task.actualStartAt)}
+          disabled={!canManage || hasChildren}
+          title={hasChildren ? "父任务实际时间由子任务自动汇总推导" : undefined}
           onChange={(e) => {
             const val = e.target.value;
             const nextStatus = val && task.status === "UNSCHEDULED" ? "IN_PROGRESS" : task.status;
             onFieldChange(task, { actualStartAt: val, status: nextStatus });
           }}
-          className={cellInputClass}
+          onKeyDown={handleKeyDownNavigation}
+          className={`${cellInputClass} ${hasChildren || !canManage ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
         />
       </div>
 
       {/* 9. 实际完成时间 */}
       <div className="w-32 shrink-0 border-r border-border p-1 flex items-center">
         <input
-          type="datetime-local"
-          value={formatToDatetimeLocal(task.actualFinishAt)}
+          type="date"
+          value={formatToDateString(task.actualFinishAt)}
+          disabled={!canManage || hasChildren}
+          title={hasChildren ? "父任务实际时间由子任务自动汇总推导" : undefined}
           onChange={(e) => {
             const val = e.target.value;
             const nextStatus = val ? "DONE" : task.status;
             const nextProgress = val ? 100 : task.progressPercent;
             onFieldChange(task, { actualFinishAt: val, status: nextStatus, progressPercent: nextProgress });
           }}
-          className={cellInputClass}
+          onKeyDown={handleKeyDownNavigation}
+          className={`${cellInputClass} ${hasChildren || !canManage ? "bg-muted/40 text-muted-foreground cursor-not-allowed" : ""}`}
         />
       </div>
 
-      {/* 10. 任务状态 (新增列：放在实际完成之后) */}
+      {/* 10. 任务状态 (放在实际完成之后) */}
       <div className="w-24 shrink-0 border-r border-border p-1 flex items-center justify-center">
         {hasChildren ? (
           <span className={`rounded border px-2 py-0.5 text-[11px] font-medium ${statusBadgeColors[task.status] || ""}`}>
@@ -537,8 +566,10 @@ const GridRow = memo(function GridRow({
         ) : (
           <select
             value={task.status}
+            disabled={!canManage}
             onChange={(e) => onFieldChange(task, { status: e.target.value })}
-            className={`${cellSelectClass} text-center font-medium ${statusBadgeColors[task.status] || ""}`}
+            onKeyDown={handleKeyDownNavigation}
+            className={`${cellSelectClass} text-center font-medium ${statusBadgeColors[task.status] || ""} ${!canManage ? "cursor-not-allowed opacity-70" : ""}`}
           >
             {Object.entries(statusLabels).map(([key, label]) => (
               <option key={key} value={key}>
@@ -549,29 +580,15 @@ const GridRow = memo(function GridRow({
         )}
       </div>
 
-      {/* 11. 进度 (%) */}
-      <div className="w-20 shrink-0 border-r border-border p-1 flex items-center justify-center">
-        {hasChildren ? (
-          <span className="text-xs font-semibold text-indigo-400 px-1">{task.progressPercent}</span>
-        ) : (
-          <input
-            type="number"
-            min={0}
-            max={100}
-            value={task.progressPercent}
-            onChange={(e) => onFieldChange(task, { progressPercent: Number(e.target.value) })}
-            className={`${cellInputClass} text-center font-semibold text-indigo-400`}
-          />
-        )}
-      </div>
-
       {/* 12. 关联月度事项 (放在新增列之后) */}
       <div className="w-32 shrink-0 border-r border-border p-1 flex items-center">
         {isLevel1 ? (
           <select
             value={currentMonthlyVal}
+            disabled={!canManage}
             onChange={(e) => handleMonthlyItemChange(e.target.value)}
-            className={cellSelectClass}
+            onKeyDown={handleKeyDownNavigation}
+            className={`${cellSelectClass} ${!canManage ? "cursor-not-allowed opacity-70" : ""}`}
           >
             <option value="">-- 未关联 --</option>
             {teamMonthlyItems.map((item) => (
@@ -589,12 +606,13 @@ const GridRow = memo(function GridRow({
       </div>
 
       {/* 13. 关联版本/项目 (放在新增列之后) */}
-      <div className="w-28 shrink-0 border-r border-border p-1 flex items-center">
+      <div className="w-36 shrink-0 border-r border-border p-1 flex items-center">
         {isLevel1 ? (
           <select
             value={currentVersionVal}
+            disabled={!canManage}
             onChange={(e) => handleVersionChange(e.target.value)}
-            className={cellSelectClass}
+            className={`${cellSelectClass} ${!canManage ? "cursor-not-allowed opacity-70" : ""}`}
           >
             <option value="">-- 未关联 --</option>
             <optgroup label="产品版本">
@@ -752,10 +770,15 @@ export default function TaskGridView({
     setDraftTasks((prev) => prev.filter((t) => t.id !== draftTaskId));
   };
 
+  const savingDraftIdsRef = useRef<Set<string>>(new Set());
+
   // 保存草稿行至数据库
-  const handleSaveDraft = (draftTask: TaskItem, title: string) => {
-    // 先从草稿行列表中移除
-    setDraftTasks((prev) => prev.filter((t) => t.id !== draftTask.id));
+  const handleSaveDraft = (draftTask: TaskItem, title: string, createNextSubTask: boolean = false) => {
+    if (savingDraftIdsRef.current.has(draftTask.id)) return;
+    savingDraftIdsRef.current.add(draftTask.id);
+
+    // 更新草稿行标题，保持行在界面上稳定展示，不提前删除
+    setDraftTasks((prev) => prev.map((t) => (t.id === draftTask.id ? { ...t, title } : t)));
 
     setSavingTaskId(draftTask.parentId || draftTask.id);
     startTransition(async () => {
@@ -767,13 +790,13 @@ export default function TaskGridView({
           category: draftTask.category || "DEVELOPMENT",
           sdlcNode: draftTask.sdlcNode || null,
           status: draftTask.status || "UNSCHEDULED",
-          planStartDate: draftTask.planStartDate ? draftTask.planStartDate.slice(0, 16) : null,
-          planEndDate: draftTask.planEndDate ? draftTask.planEndDate.slice(0, 16) : null,
+          planStartDate: draftTask.planStartDate ? draftTask.planStartDate.slice(0, 10) : null,
+          planEndDate: draftTask.planEndDate ? draftTask.planEndDate.slice(0, 10) : null,
           plannedWorkdays: 0,
           actualWorkdays: 0,
           progressPercent: 0,
-          actualStartAt: draftTask.actualStartAt ? draftTask.actualStartAt.slice(0, 16) : null,
-          actualFinishAt: draftTask.actualFinishAt ? draftTask.actualFinishAt.slice(0, 16) : null,
+          actualStartAt: draftTask.actualStartAt ? draftTask.actualStartAt.slice(0, 10) : null,
+          actualFinishAt: draftTask.actualFinishAt ? draftTask.actualFinishAt.slice(0, 10) : null,
           executorId: draftTask.executorId || null,
           monthlyPlanId: draftTask.monthlyPlanId || null,
           monthlyItemType: draftTask.monthlyItemType || null,
@@ -787,15 +810,23 @@ export default function TaskGridView({
         const res = await createManagedTask(payload as any);
         if (res.success && res.data) {
           const newRealTask = res.data as TaskItem;
+          // 原子性更新乐观任务列表并移除草稿行，平滑替换，无感觉过度
           setOptimisticTasks((prev) => [...prev.filter((t) => t.id !== newRealTask.id), newRealTask]);
+          setDraftTasks((prev) => prev.filter((t) => t.id !== draftTask.id));
           setSavedTaskId(draftTask.parentId || draftTask.id);
           setTimeout(() => setSavedTaskId(null), 1800);
+
+          // 仅在真实 DB 任务创建完成后，基于持久化的 REAL TASK ID 创建新的子任务草稿
+          if (createNextSubTask && newRealTask.level < 3) {
+            handleAddDraftSubTask(newRealTask);
+          }
         } else if (res.error) {
-          alert(`保存子任务失败: ${res.error}`);
+          alert(`保存任务失败: ${res.error}`);
         }
       } catch (err) {
         console.error("Save draft error:", err);
       } finally {
+        savingDraftIdsRef.current.delete(draftTask.id);
         setSavingTaskId(null);
       }
     });
@@ -851,39 +882,24 @@ export default function TaskGridView({
 
     traverse("root", 0);
     return result;
-  }, [tasks, draftTasks, collapsedIds]);
+  }, [tasks, draftTasks, optimisticTasks, collapsedIds]);
 
-  // Execute field update
+  // Execute field update — 只传变更字段，服务端从 DB 读最新值合并
   const handleFieldChange = (task: TaskItem, fields: Partial<TaskItem>) => {
     if (task.isDraft) return;
 
     setSavingTaskId(task.id);
     startTransition(async () => {
       try {
-        const payload = {
-          title: fields.title !== undefined ? fields.title : task.title,
-          description: fields.description !== undefined ? fields.description : task.description || "",
-          category: fields.category !== undefined ? fields.category : task.category || "DEVELOPMENT",
-          sdlcNode: fields.sdlcNode !== undefined ? fields.sdlcNode : task.sdlcNode || "",
-          status: fields.status !== undefined ? fields.status : task.status,
-          planStartDate: fields.planStartDate !== undefined ? fields.planStartDate : (task.planStartDate ? task.planStartDate.slice(0, 16) : ""),
-          planEndDate: fields.planEndDate !== undefined ? fields.planEndDate : (task.planEndDate ? task.planEndDate.slice(0, 16) : ""),
-          plannedWorkdays: task.plannedWorkdays,
-          actualWorkdays: task.actualWorkdays,
-          progressPercent: fields.progressPercent !== undefined ? fields.progressPercent : task.progressPercent,
-          actualStartAt: fields.actualStartAt !== undefined ? fields.actualStartAt : (task.actualStartAt ? task.actualStartAt.slice(0, 16) : ""),
-          actualFinishAt: fields.actualFinishAt !== undefined ? fields.actualFinishAt : (task.actualFinishAt ? task.actualFinishAt.slice(0, 16) : ""),
-          executorId: fields.executorId !== undefined ? fields.executorId : task.executorId || "",
-          monthlyPlanId: fields.monthlyPlanId !== undefined ? fields.monthlyPlanId : task.monthlyPlanId || "",
-          monthlyItemType: fields.monthlyItemType !== undefined ? fields.monthlyItemType : task.monthlyItemType || "",
-          monthlyItemId: fields.monthlyItemId !== undefined ? fields.monthlyItemId : task.monthlyItemId || "",
-          versionType: fields.versionType !== undefined ? fields.versionType : task.versionType || "",
-          productVersionId: fields.productVersionId !== undefined ? fields.productVersionId : task.productVersionId || "",
-          projectVersionId: fields.projectVersionId !== undefined ? fields.projectVersionId : task.projectVersionId || "",
-          notes: fields.notes !== undefined ? fields.notes : task.notes || "",
-        };
+        // 日期字段确保只传纯日期部分（YYYY-MM-DD），避免时区偏移
+        const patch: Record<string, unknown> = { ...fields };
+        for (const key of ["planStartDate", "planEndDate", "actualStartAt", "actualFinishAt"] as const) {
+          if (typeof patch[key] === "string" && (patch[key] as string).length > 10) {
+            patch[key] = (patch[key] as string).slice(0, 10);
+          }
+        }
 
-        const res = await updateManagedTask(task.id, payload as any);
+        const res = await patchManagedTaskFields(task.id, patch);
         if (res.success) {
           setSavedTaskId(task.id);
           setTimeout(() => setSavedTaskId(null), 1800);
@@ -896,17 +912,114 @@ export default function TaskGridView({
     });
   };
 
+  const handleIndentTask = (taskId: string) => {
+    setSavingTaskId(taskId);
+    startTransition(async () => {
+      try {
+        const res = await indentManagedTask(taskId);
+        if (res.success) {
+          setSavedTaskId(taskId);
+          setTimeout(() => setSavedTaskId(null), 1800);
+        } else if (res.error) {
+          alert(`降级任务失败: ${res.error}`);
+        }
+      } catch (err) {
+        console.error("Indent task error:", err);
+      } finally {
+        setSavingTaskId(null);
+      }
+    });
+  };
+
+  const handleOutdentTask = (taskId: string) => {
+    setSavingTaskId(taskId);
+    startTransition(async () => {
+      try {
+        const res = await outdentManagedTask(taskId);
+        if (res.success) {
+          setSavedTaskId(taskId);
+          setTimeout(() => setSavedTaskId(null), 1800);
+        } else if (res.error) {
+          alert(`升级任务失败: ${res.error}`);
+        }
+      } catch (err) {
+        console.error("Outdent task error:", err);
+      } finally {
+        setSavingTaskId(null);
+      }
+    });
+  };
+
+  const handleCopyTask = (taskId: string) => {
+    setSavingTaskId(taskId);
+    startTransition(async () => {
+      try {
+        const res = await copyManagedTask(taskId);
+        if (res.success && res.data) {
+          const copied = res.data as TaskItem;
+          setOptimisticTasks((prev) => [...prev.filter((t) => t.id !== copied.id), copied]);
+          setSavedTaskId(copied.id);
+          setTimeout(() => setSavedTaskId(null), 1800);
+        } else if (res.error) {
+          alert(`复制任务失败: ${res.error}`);
+        }
+      } catch (err) {
+        console.error("Copy task error:", err);
+      } finally {
+        setSavingTaskId(null);
+      }
+    });
+  };
+
+  const handleMoveUpTask = (taskId: string) => {
+    setSavingTaskId(taskId);
+    startTransition(async () => {
+      try {
+        const res = await moveTaskUp(taskId);
+        if (res.success) {
+          setSavedTaskId(taskId);
+          setTimeout(() => setSavedTaskId(null), 1800);
+        } else if (res.error) {
+          alert(`上移任务失败: ${res.error}`);
+        }
+      } catch (err) {
+        console.error("Move task up error:", err);
+      } finally {
+        setSavingTaskId(null);
+      }
+    });
+  };
+
+  const handleMoveDownTask = (taskId: string) => {
+    setSavingTaskId(taskId);
+    startTransition(async () => {
+      try {
+        const res = await moveTaskDown(taskId);
+        if (res.success) {
+          setSavedTaskId(taskId);
+          setTimeout(() => setSavedTaskId(null), 1800);
+        } else if (res.error) {
+          alert(`下移任务失败: ${res.error}`);
+        }
+      } catch (err) {
+        console.error("Move task down error:", err);
+      } finally {
+        setSavingTaskId(null);
+      }
+    });
+  };
+
   return (
     <div className="h-[calc(100vh-179px)] min-h-[450px] overflow-auto rounded-xl border border-border bg-card shadow-2xl">
       <div className="w-full min-w-full">
         {/* 表格头（粘性顶置） */}
         <div className="sticky top-0 z-20 flex border-b border-border bg-card font-semibold text-xs text-muted-foreground select-none">
-          <div className="w-14 shrink-0 border-r border-border px-1 py-2.5 flex items-center justify-center gap-1 sticky left-0 z-30 bg-card">
+          <div className="w-36 shrink-0 border-r border-border px-1 py-2.5 flex items-center justify-center gap-1 sticky left-0 z-30 bg-card">
             <span>操作</span>
             <button
               title="添加一级任务行"
               onClick={handleAddDraftRootTask}
-              className="rounded p-0.5 text-indigo-400 hover:bg-indigo-500/20"
+              className="rounded p-0.5 text-indigo-400 hover:bg-indigo-500/20 cursor-pointer"
             >
               <Plus className="h-3.5 w-3.5" />
             </button>
@@ -941,15 +1054,11 @@ export default function TaskGridView({
             <Activity className="h-3.5 w-3.5 text-amber-400" />
             <span>任务状态</span>
           </div>
-          <div className="w-20 shrink-0 border-r border-border px-1 py-2.5 flex items-center justify-center gap-1">
-            <Percent className="h-3.5 w-3.5 text-indigo-400" />
-            <span>进度</span>
-          </div>
           <div className="w-32 shrink-0 border-r border-border px-2 py-2.5 flex items-center gap-1">
             <Folder className="h-3.5 w-3.5 text-amber-400" />
             <span>关联月度事项</span>
           </div>
-          <div className="w-28 shrink-0 border-r border-border px-2 py-2.5 flex items-center gap-1">
+          <div className="w-36 shrink-0 border-r border-border px-2 py-2.5 flex items-center gap-1">
             <Tag className="h-3.5 w-3.5 text-sky-400" />
             <span>关联版本</span>
           </div>
@@ -982,6 +1091,11 @@ export default function TaskGridView({
                 onFieldChange={handleFieldChange}
                 onSaveDraft={handleSaveDraft}
                 onDiscardDraft={handleDiscardDraft}
+                onIndentTask={handleIndentTask}
+                onOutdentTask={handleOutdentTask}
+                onCopyTask={handleCopyTask}
+                onMoveUpTask={handleMoveUpTask}
+                onMoveDownTask={handleMoveDownTask}
                 savingTaskId={savingTaskId}
                 savedTaskId={savedTaskId}
               />

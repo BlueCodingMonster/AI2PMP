@@ -279,3 +279,31 @@ body {
 .animate-slide-in {
   animation: slide-in-left 0.3s ease-out;
 }
+
+/* ===== 强制覆盖: 日期选择器图标 (深色纯白，浅色黑色) ===== */
+input[type="date"] {
+  color-scheme: dark !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer !important;
+  filter: brightness(0) invert(1) !important;
+  opacity: 0.9 !important;
+  transition: opacity 0.2s, filter 0.2s !important;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1 !important;
+}
+
+/* 浅色主题恢复黑图标 */
+.light input[type="date"],
+html.light input[type="date"] {
+  color-scheme: light !important;
+}
+
+.light input[type="date"]::-webkit-calendar-picker-indicator,
+html.light input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none !important;
+  opacity: 0.75 !important;
+}

@@ -268,7 +268,7 @@ function LoginForm() {
     <div
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
-      className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-8 max-w-6xl w-full mx-auto items-center py-6 md:py-12 relative overflow-visible min-h-[80vh]"
+      className="relative flex min-h-[85vh] w-full max-w-lg mx-auto items-center justify-center py-6 md:py-12 overflow-visible select-none"
     >
       {/* CSS 局部动画注入 */}
       <style dangerouslySetInnerHTML={{__html: `
@@ -310,9 +310,9 @@ function LoginForm() {
           }}
         />
 
-        {/* 2. 动态彩色光环1 (青色 - 自动漂移 + 鼠标视差正向跟随) */}
+        {/* 2. 动态彩色光环1 (青色) */}
         <div
-          className="absolute left-[10%] top-[15%] pointer-events-none lg:block hidden"
+          className="absolute left-[15%] top-[15%] pointer-events-none lg:block hidden"
           style={{
             transform: `translate(${(mousePos.x - 50) * 0.15}px, ${(mousePos.y - 50) * 0.15}px)`,
             transition: "transform 0.1s ease-out",
@@ -321,9 +321,9 @@ function LoginForm() {
           <div className="animate-float-cyan h-[450px] w-[450px] rounded-full bg-cyan-500/[0.07] blur-[120px]" />
         </div>
 
-        {/* 3. 动态彩色光环2 (紫色 - 自动漂移 + 鼠标视差反向推移) */}
+        {/* 3. 动态彩色光环2 (紫色) */}
         <div
-          className="absolute right-[5%] bottom-[15%] pointer-events-none lg:block hidden"
+          className="absolute right-[15%] bottom-[15%] pointer-events-none lg:block hidden"
           style={{
             transform: `translate(${(mousePos.x - 50) * -0.12}px, ${(mousePos.y - 50) * -0.12}px)`,
             transition: "transform 0.1s ease-out",
@@ -332,20 +332,9 @@ function LoginForm() {
           <div className="animate-float-purple h-[500px] w-[500px] rounded-full bg-purple-500/[0.06] blur-[130px]" />
         </div>
 
-        {/* 4. 动态彩色光环3 (粉色 - 辅助发光) */}
+        {/* 4. 交互聚光灯 (实时吸附在鼠标指针下方，照亮后方的玻璃态卡片) */}
         <div
-          className="absolute left-[40%] top-[40%] pointer-events-none lg:block hidden"
-          style={{
-            transform: `translate(${(mousePos.x - 50) * 0.08}px, ${(mousePos.y - 50) * -0.08}px)`,
-            transition: "transform 0.1s ease-out",
-          }}
-        >
-          <div className="animate-float-pink h-[350px] w-[350px] rounded-full bg-pink-500/[0.04] blur-[100px]" />
-        </div>
-
-        {/* 5. 交互聚光灯 (实时吸附在鼠标指针下方，照亮后方的玻璃态卡片) */}
-        <div
-          className="absolute pointer-events-none w-[550px] h-[550px] rounded-full bg-gradient-to-r from-indigo-500/5 via-cyan-500/3 to-purple-500/5 blur-[100px] lg:block hidden"
+          className="absolute pointer-events-none w-[550px] h-[550px] rounded-full bg-gradient-to-r from-indigo-500/8 via-cyan-500/5 to-purple-500/8 blur-[100px] lg:block hidden"
           style={{
             left: `${mousePos.x}%`,
             top: `${mousePos.y}%`,
@@ -354,81 +343,29 @@ function LoginForm() {
         />
       </div>
 
-      {/* ===== 左侧：Gemini 风格的品牌介绍与 Slogan ===== */}
-      <div className="lg:col-span-7 flex flex-col justify-center text-left space-y-8 pr-0 lg:pr-12 relative z-10 select-none">
-        <div className="space-y-4">
-          {/* 徽章标 */}
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/5 bg-white/5 px-3.5 py-1 text-xs text-indigo-300 backdrop-blur-sm tracking-wide">
-            <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse" />
-            <span>SDLC 研发效能平台 v2.0</span>
-          </div>
-
-          {/* 核心标语 */}
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-white leading-tight">
-            重塑软件研发周期的
-            <span className="block mt-2 bg-gradient-to-r from-cyan-400 via-indigo-300 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-              无限效能边界
-            </span>
-          </h1>
-
-          <p className="text-sm md:text-base text-muted-foreground/80 leading-relaxed max-w-xl">
-            基于莫比乌斯环设计理念，实现需求、计划、开发、测试、部署与运维的极致连贯性，消除环节孤岛，为团队带来无缝的一体化协同和卓越的业务敏捷性。
-          </p>
-        </div>
-
-        {/* 关键特性三条 */}
-        <div className="space-y-5 max-w-lg">
-          <div className="flex gap-4 items-start group cursor-default">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.03] border border-white/5 text-cyan-400 shadow-inner group-hover:border-cyan-500/20 transition-all duration-300">
-              <Compass className="h-5 w-5 group-hover:scale-110 transition-transform" />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-white group-hover:text-cyan-400 transition-colors">需求与计划深度衔接</h4>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                全周期的 WBS 计划管理与团队/个人甘特图，确保迭代交付节点精确掌控。
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4 items-start group cursor-default">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.03] border border-white/5 text-purple-400 shadow-inner group-hover:border-purple-500/20 transition-all duration-300">
-              <Rocket className="h-5 w-5 group-hover:scale-110 transition-transform" />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-white group-hover:text-purple-400 transition-colors">自动化部署平滑交付</h4>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                多阶段构建优化，一键自动化 CI/CD 发布与多环境无缝平滑切换。
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-4 items-start group cursor-default">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.03] border border-white/5 text-teal-400 shadow-inner group-hover:border-teal-500/20 transition-all duration-300">
-              <Cpu className="h-5 w-5 group-hover:scale-110 transition-transform" />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-white group-hover:text-teal-400 transition-colors">运维调优与全天候审计</h4>
-              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
-                全站用户审计追踪与多指标运行日志分析，保障线上环境的绝对平稳。
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* ===== 右侧：Gemini 风格的极简玻璃态登录卡片 ===== */}
-      <div className="lg:col-span-5 flex justify-center w-full relative z-10">
-        <div className="glass-strong w-full max-w-md rounded-3xl p-8 border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_20px_50px_rgba(0,0,0,0.4)] transition-all duration-500 hover:border-white/15">
+      {/* ===== 中央：Gemini 风格极简居中超质感登录卡片 ===== */}
+      <div className="flex justify-center w-full relative z-10">
+        <div className="glass-strong w-full rounded-3xl p-8 md:p-10 border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_25px_60px_rgba(0,0,0,0.5)] transition-all duration-500 hover:border-white/20 hover:shadow-[0_30px_70px_rgba(99,102,241,0.15)]">
           
-          {/* 图标与欢迎信息 */}
+          {/* 品牌 Icon + Badge + 标语 */}
           <div className="mb-8 text-center flex flex-col items-center">
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.02] border border-white/10 shadow-lg shadow-black/20 backdrop-blur-md hover:scale-105 transition-transform duration-300">
-              {/* 启用彩色版的莫比乌斯环图标，在黑卡背景下惊艳夺目 */}
+            {/* 顶栏版本 Badge */}
+            <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.04] px-3.5 py-1 text-xs text-indigo-300 backdrop-blur-md shadow-inner tracking-wide">
+              <span className="h-1.5 w-1.5 rounded-full bg-cyan-400 shadow-[0_0_8px_#22d3ee] animate-pulse" />
+              <span>SDLC 研发效能平台 v2.0</span>
+            </div>
+
+            {/* 彩色莫比乌斯环 Logo */}
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-white/[0.02] border border-white/10 shadow-xl shadow-black/30 backdrop-blur-md hover:scale-105 transition-transform duration-300">
               <SdlcIcon size={56} colored={true} />
             </div>
-            <h2 className="text-xl font-bold tracking-tight text-white">欢迎回来</h2>
-            <p className="mt-1.5 text-xs text-muted-foreground">
-              请输入您的账户凭证以登录效能工作台
+
+            {/* 极简主标题与标语 */}
+            <h1 className="text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              欢迎登录效能工作台
+            </h1>
+            <p className="mt-2 text-xs md:text-sm text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-indigo-300 to-purple-400 font-medium">
+              重塑软件研发周期的无限效能边界
             </p>
           </div>
 
@@ -489,7 +426,7 @@ function LoginForm() {
             <button
               type="submit"
               disabled={isPending}
-              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 py-3 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/25 transition-all duration-300 hover:from-cyan-400 hover:via-indigo-400 hover:to-purple-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+              className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-purple-600 py-3.5 px-4 text-sm font-semibold text-white shadow-lg shadow-indigo-500/10 hover:shadow-indigo-500/25 transition-all duration-300 hover:from-cyan-400 hover:via-indigo-400 hover:to-purple-500 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isPending ? (
                 <>
@@ -505,8 +442,12 @@ function LoginForm() {
             </button>
           </form>
 
-          {/* 占位符结构 */}
-          <div className="mt-6" />
+          {/* 底部保留优雅脚标 */}
+          <div className="mt-8 pt-4 border-t border-white/5 text-center">
+            <p className="text-[11px] text-muted-foreground/50">
+              © {new Date().getFullYear()} SDLC Platform · 一体化研发效能解决方案
+            </p>
+          </div>
         </div>
       </div>
     </div>

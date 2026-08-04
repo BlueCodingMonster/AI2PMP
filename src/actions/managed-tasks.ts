@@ -36,21 +36,28 @@ type TaskWithParent = Prisma.ManagedTaskGetPayload<{ include: { parent: true; ch
 
 const clean = (value?: string | null) => value?.trim() || null;
 
+// 系统固定使用东八区（Asia/Shanghai），所有无时区的日期字符串都按 +08:00 解析
+const SYSTEM_TZ_OFFSET = "+08:00";
+
 const toDate = (value?: string | null, isEnd: boolean = false) => {
   if (!value) return null;
-  // If it's already an ISO string with timezone or time
-  if (value.includes("T") || value.includes("Z")) {
+  // If it's already an ISO string with timezone (contains Z or +/- offset)
+  if (value.includes("Z") || /[+-]\d{2}:\d{2}$/.test(value)) {
     return new Date(value);
+  }
+  // Contains "T" but no timezone → append system timezone
+  if (value.includes("T")) {
+    return new Date(`${value}${SYSTEM_TZ_OFFSET}`);
   }
   // Space format like "2026-07-23 08:30"
   if (value.includes(" ")) {
-    return new Date(value.replace(" ", "T"));
+    return new Date(`${value.replace(" ", "T")}${SYSTEM_TZ_OFFSET}`);
   }
-  // Date-only string like "2026-07-23"
+  // Date-only string like "2026-07-23" → 开始时间 08:00，结束时间 18:00（东八区工作时间）
   if (isEnd) {
-    return new Date(`${value}T18:00:00`);
+    return new Date(`${value}T18:00:00${SYSTEM_TZ_OFFSET}`);
   } else {
-    return new Date(`${value}T08:00:00`);
+    return new Date(`${value}T08:00:00${SYSTEM_TZ_OFFSET}`);
   }
 };
 
@@ -318,15 +325,15 @@ function getVersionData(data: ManagedTaskInput) {
 
 function leafData(data: ManagedTaskInput) {
   const status = data.executorId ? data.status : ManagedTaskStatus.UNSCHEDULED;
-  const actualStartAt = toDate(data.actualStartAt) ?? (status === ManagedTaskStatus.IN_PROGRESS ? new Date() : null);
-  const actualFinishAt = toDate(data.actualFinishAt) ?? (status === ManagedTaskStatus.DONE ? new Date() : null);
+  const actualStartAt = toDate(data.actualStartAt, false) ?? (status === ManagedTaskStatus.IN_PROGRESS ? new Date() : null);
+  const actualFinishAt = toDate(data.actualFinishAt, true) ?? (status === ManagedTaskStatus.DONE ? new Date() : null);
   return {
     title: data.title,
     description: clean(data.description),
     sdlcNode: data.sdlcNode ?? null,
     status,
-    planStartDate: toDate(data.planStartDate),
-    planEndDate: toDate(data.planEndDate),
+    planStartDate: toDate(data.planStartDate, false),
+    planEndDate: toDate(data.planEndDate, true),
     plannedWorkdays: data.plannedWorkdays,
     progressPercent: data.executorId ? data.progressPercent : 0,
     actualStartAt,
@@ -488,17 +495,44 @@ export async function createManagedTask(input: ManagedTaskInput) {
     if (!parsed.success) return { success: false, error: parsed.error.issues[0]?.message ?? "任务数据校验失败" };
     const data = parsed.data;
 
-    if (!data.executorId) {
-      if (data.status !== ManagedTaskStatus.UNSCHEDULED) return { success: false, error: "未分配执行人的叶子任务只能保持待排期" };
-      if (data.progressPercent !== 0) return { success: false, error: "未分配执行人的叶子任务进度必须为0" };
-    }
-
     const parent = data.parentId ? await prisma.managedTask.findUnique({ where: { id: data.parentId }, include: { children: true } }) : null;
     if (data.parentId && !parent) return { success: false, error: "上级任务不存在" };
     if (parent) await assertCanManageTask(parent, user);
     if (parent && parent.level >= 3) return { success: false, error: "任务最多只能拆分三级" };
-    if (parent && parent.children.length === 0 && (parent.actualStartAt || parent.actualFinishAt || parent.status === ManagedTaskStatus.DONE)) {
-      return { success: false, error: "该任务已有执行数据，请先使用拆分任务操作迁移执行数据" };
+
+    if (parent && parent.children.length === 0) {
+      const hasParentExecutionData = Boolean(
+        parent.executorId ||
+        parent.actualStartAt ||
+        parent.actualFinishAt ||
+        parent.status === ManagedTaskStatus.DONE ||
+        parent.status === ManagedTaskStatus.IN_PROGRESS
+      );
+      if (hasParentExecutionData) {
+        if (!data.executorId && parent.executorId) data.executorId = parent.executorId;
+        if (!data.actualStartAt && parent.actualStartAt) data.actualStartAt = parent.actualStartAt.toISOString();
+        if (!data.actualFinishAt && parent.actualFinishAt) data.actualFinishAt = parent.actualFinishAt.toISOString();
+        if (!data.planStartDate && parent.planStartDate) data.planStartDate = parent.planStartDate.toISOString();
+        if (!data.planEndDate && parent.planEndDate) data.planEndDate = parent.planEndDate.toISOString();
+        if (data.status === ManagedTaskStatus.UNSCHEDULED && parent.status !== ManagedTaskStatus.UNSCHEDULED && data.executorId) {
+          data.status = parent.status;
+        }
+        if (data.progressPercent === 0 && parent.progressPercent > 0) data.progressPercent = parent.progressPercent;
+        if (!data.monthlyPlanId && parent.monthlyPlanId) {
+          data.monthlyPlanId = parent.monthlyPlanId;
+          data.monthlyItemType = parent.monthlyItemType;
+          data.monthlyItemId = parent.monthlyItemId;
+        }
+        if (!data.versionType && parent.versionType) {
+          data.versionType = parent.versionType;
+          data.versionId = parent.productVersionId || parent.projectVersionId || undefined;
+        }
+      }
+    }
+
+    if (!data.executorId) {
+      if (data.status !== ManagedTaskStatus.UNSCHEDULED) return { success: false, error: "未分配执行人的叶子任务只能保持待排期" };
+      if (data.progressPercent !== 0) return { success: false, error: "未分配执行人的叶子任务进度必须为0" };
     }
 
     const level = parent ? parent.level + 1 : 1;
@@ -634,25 +668,88 @@ export async function updateManagedTask(id: string, input: ManagedTaskInput) {
   }
 }
 
+/**
+ * Grid 视图专用 PATCH 更新：只传变更字段，服务端从 DB 读最新值后合并。
+ * 解决并发覆盖问题——两人同时编辑同一任务的不同字段时互不干扰。
+ */
+export async function patchManagedTaskFields(
+  id: string,
+  patch: Record<string, unknown>
+) {
+  try {
+    const existing = await prisma.managedTask.findUnique({ where: { id } });
+    if (!existing) return { success: false, error: "任务不存在" };
+
+    // 将 DB 记录转换为 ManagedTaskInput 格式，日期只保留 YYYY-MM-DD
+    const dateStr = (d: Date | null) => d ? d.toISOString().slice(0, 10) : null;
+    const current: ManagedTaskInput = {
+      parentId: existing.parentId,
+      title: existing.title,
+      description: existing.description,
+      category: existing.category,
+      sdlcNode: existing.sdlcNode,
+      status: existing.status,
+      planStartDate: dateStr(existing.planStartDate),
+      planEndDate: dateStr(existing.planEndDate),
+      plannedWorkdays: existing.plannedWorkdays,
+      progressPercent: existing.progressPercent,
+      actualStartAt: dateStr(existing.actualStartAt),
+      actualFinishAt: dateStr(existing.actualFinishAt),
+      executorId: existing.executorId,
+      monthlyPlanId: existing.monthlyPlanId,
+      monthlyItemType: existing.monthlyItemType,
+      monthlyItemId: existing.monthlyItemId,
+      versionType: existing.versionType,
+      versionId: existing.productVersionId || existing.projectVersionId || null,
+      notes: existing.notes,
+    };
+
+    // 合并 patch 到 current（只覆盖传入的字段）
+    const merged = { ...current, ...patch } as ManagedTaskInput;
+
+    return updateManagedTask(id, merged);
+  } catch (error) {
+    console.error("[patchManagedTaskFields]", error);
+    return { success: false, error: error instanceof Error ? error.message : "更新任务失败" };
+  }
+}
+
+async function deleteSubtree(taskId: string) {
+  const children = await prisma.managedTask.findMany({
+    where: { parentId: taskId },
+    select: { id: true },
+  });
+  for (const child of children) {
+    await deleteSubtree(child.id);
+  }
+  await prisma.managedTaskStatusLog.deleteMany({
+    where: { taskId },
+  });
+  await prisma.managedTask.delete({
+    where: { id: taskId },
+  });
+}
+
 export async function deleteOrCancelManagedTask(id: string) {
   try {
     const user = await currentUser();
     const task = await prisma.managedTask.findUnique({ where: { id }, include: { children: true } });
     if (!task) return { success: false, error: "任务不存在" };
     await assertCanManageTask(task, user);
-    if (task.children.length === 0 && !task.actualStartAt && task.status !== ManagedTaskStatus.DONE) {
-      await prisma.managedTask.delete({ where: { id } });
-      await recordAuditLog("DELETE", "WBS", `删除了 WBS 任务：${task.title}`);
-    } else {
-      await prisma.managedTask.update({ where: { id }, data: { status: ManagedTaskStatus.CANCELLED } });
-      await recordAuditLog("CANCEL", "WBS", `取消了 WBS 任务：${task.title}`);
+
+    const parentId = task.parentId;
+
+    await deleteSubtree(id);
+    await recordAuditLog("DELETE", "WBS", `彻底删除了 WBS 任务：${task.title}`);
+
+    if (parentId) {
+      await rollupAncestors(parentId);
     }
-    await rollupAncestors(task.parentId);
     revalidatePath("/managed-tasks");
     return { success: true };
   } catch (error) {
     console.error("[deleteOrCancelManagedTask]", error);
-    return { success: false, error: error instanceof Error ? error.message : "删除/取消任务失败" };
+    return { success: false, error: error instanceof Error ? error.message : "删除任务失败" };
   }
 }
 
@@ -666,6 +763,232 @@ export async function clearAllManagedTasks() {
   } catch (error) {
     console.error("[clearAllManagedTasks]", error);
     return { success: false, error: error instanceof Error ? error.message : "清空任务失败" };
+  }
+}
+
+export async function copyManagedTask(id: string) {
+  try {
+    const user = await currentUser();
+    const original = await prisma.managedTask.findUnique({
+      where: { id },
+      include: { children: true },
+    });
+    if (!original) return { success: false, error: "任务不存在" };
+    await assertCanManageTask(original, user);
+
+    // 辅助递归复制子树
+    async function duplicateNode(srcId: string, newParentId: string | null, isRoot: boolean): Promise<any> {
+      const src = await prisma.managedTask.findUnique({
+        where: { id: srcId },
+        include: { children: { orderBy: { sequenceNo: "asc" } } },
+      });
+      if (!src) return null;
+
+      const parentTask = newParentId ? await prisma.managedTask.findUnique({ where: { id: newParentId } }) : null;
+      const created = await prisma.managedTask.create({
+        data: {
+          title: isRoot ? `${src.title} (副本)` : src.title,
+          description: src.description,
+          level: isRoot ? src.level : (parentTask ? parentTask.level + 1 : 1),
+          parentId: newParentId,
+          category: src.category,
+          sdlcNode: src.sdlcNode,
+          status: src.status,
+          planStartDate: src.planStartDate,
+          planEndDate: src.planEndDate,
+          plannedWorkdays: src.plannedWorkdays,
+          actualWorkdays: src.actualWorkdays,
+          progressPercent: src.progressPercent,
+          actualStartAt: src.actualStartAt,
+          actualFinishAt: src.actualFinishAt,
+          productLineTeamId: src.productLineTeamId,
+          createdById: user?.id || src.createdById,
+          executorId: src.executorId,
+          monthlyPlanId: src.monthlyPlanId,
+          monthlyItemType: src.monthlyItemType,
+          monthlyItemId: src.monthlyItemId,
+          versionType: src.versionType,
+          productVersionId: src.productVersionId,
+          projectVersionId: src.projectVersionId,
+          notes: src.notes,
+        },
+      });
+
+      for (const child of src.children) {
+        await duplicateNode(child.id, created.id, false);
+      }
+
+      return created;
+    }
+
+    const copied = await duplicateNode(id, original.parentId, true);
+    if (original.parentId) {
+      await rollupAncestors(original.parentId);
+    }
+    await recordAuditLog("CREATE", "WBS", `复制了 WBS 任务：${original.title} 及其分支`);
+    revalidatePath("/managed-tasks");
+    return { success: true, data: copied };
+  } catch (error) {
+    console.error("[copyManagedTask]", error);
+    return { success: false, error: error instanceof Error ? error.message : "复制任务失败" };
+  }
+}
+
+export async function indentManagedTask(id: string) {
+  try {
+    const user = await currentUser();
+    const task = await prisma.managedTask.findUnique({ where: { id } });
+    if (!task) return { success: false, error: "任务不存在" };
+    await assertCanManageTask(task, user);
+
+    if (task.level >= 3) return { success: false, error: "已达最大深度（3层），无法继续降级" };
+
+    const siblings = await prisma.managedTask.findMany({
+      where: { parentId: task.parentId },
+      orderBy: { sequenceNo: "asc" },
+    });
+
+    const taskIndex = siblings.findIndex((s) => s.id === task.id);
+    if (taskIndex <= 0) return { success: false, error: "上方没有同级任务，无法降级为子任务" };
+
+    const prevSibling = siblings[taskIndex - 1];
+    const oldParentId = task.parentId;
+
+    await prisma.managedTask.update({
+      where: { id: task.id },
+      data: {
+        parentId: prevSibling.id,
+        level: prevSibling.level + 1,
+      },
+    });
+
+    await rollupAncestors(prevSibling.id);
+    if (oldParentId) {
+      await rollupAncestors(oldParentId);
+    }
+
+    await recordAuditLog("UPDATE", "WBS", `降低了任务层级（降级）：${task.title}`);
+    revalidatePath("/managed-tasks");
+    return { success: true };
+  } catch (error) {
+    console.error("[indentManagedTask]", error);
+    return { success: false, error: error instanceof Error ? error.message : "降级任务失败" };
+  }
+}
+
+export async function outdentManagedTask(id: string) {
+  try {
+    const user = await currentUser();
+    const task = await prisma.managedTask.findUnique({ where: { id } });
+    if (!task) return { success: false, error: "任务不存在" };
+    await assertCanManageTask(task, user);
+
+    if (task.level <= 1 || !task.parentId) return { success: false, error: "已是一级任务，无法继续升级" };
+
+    const parent = await prisma.managedTask.findUnique({ where: { id: task.parentId } });
+    if (!parent) return { success: false, error: "父任务不存在" };
+
+    const oldParentId = task.parentId;
+
+    await prisma.managedTask.update({
+      where: { id: task.id },
+      data: {
+        parentId: parent.parentId,
+        level: parent.level,
+      },
+    });
+
+    await rollupAncestors(oldParentId);
+    if (parent.parentId) {
+      await rollupAncestors(parent.parentId);
+    }
+
+    await recordAuditLog("UPDATE", "WBS", `提升了任务层级（升级）：${task.title}`);
+    revalidatePath("/managed-tasks");
+    return { success: true };
+  } catch (error) {
+    console.error("[outdentManagedTask]", error);
+    return { success: false, error: error instanceof Error ? error.message : "升级任务失败" };
+  }
+}
+
+/**
+ * 上移任务：与上方同级任务交换 sequenceNo，实现排序上移
+ * 注意：sequenceNo 有全表 @unique 约束，需三步交换避免中间态冲突
+ */
+export async function moveTaskUp(id: string) {
+  try {
+    const user = await currentUser();
+    const task = await prisma.managedTask.findUnique({ where: { id } });
+    if (!task) return { success: false, error: "任务不存在" };
+    await assertCanManageTask(task, user);
+
+    // 查出所有同级任务（同 parentId），按 sequenceNo 升序
+    const siblings = await prisma.managedTask.findMany({
+      where: { parentId: task.parentId },
+      orderBy: { sequenceNo: "asc" },
+    });
+
+    const idx = siblings.findIndex((s) => s.id === task.id);
+    if (idx <= 0) return { success: false, error: "已是同级中的第一个任务，无法继续上移" };
+
+    const prevSibling = siblings[idx - 1];
+    const seqA = task.sequenceNo;
+    const seqB = prevSibling.sequenceNo;
+
+    // 三步交换：先置临时负值 → 写目标值 → 写回
+    await prisma.$transaction(async (tx) => {
+      await tx.managedTask.update({ where: { id: task.id }, data: { sequenceNo: -seqA } });
+      await tx.managedTask.update({ where: { id: prevSibling.id }, data: { sequenceNo: seqA } });
+      await tx.managedTask.update({ where: { id: task.id }, data: { sequenceNo: seqB } });
+    });
+
+    await recordAuditLog("UPDATE", "WBS", `上移了任务顺序：${task.title}`);
+    revalidatePath("/managed-tasks");
+    return { success: true };
+  } catch (error) {
+    console.error("[moveTaskUp]", error);
+    return { success: false, error: error instanceof Error ? error.message : "上移任务失败" };
+  }
+}
+
+/**
+ * 下移任务：与下方同级任务交换 sequenceNo，实现排序下移
+ * 注意：sequenceNo 有全表 @unique 约束，需三步交换避免中间态冲突
+ */
+export async function moveTaskDown(id: string) {
+  try {
+    const user = await currentUser();
+    const task = await prisma.managedTask.findUnique({ where: { id } });
+    if (!task) return { success: false, error: "任务不存在" };
+    await assertCanManageTask(task, user);
+
+    // 查出所有同级任务（同 parentId），按 sequenceNo 升序
+    const siblings = await prisma.managedTask.findMany({
+      where: { parentId: task.parentId },
+      orderBy: { sequenceNo: "asc" },
+    });
+
+    const idx = siblings.findIndex((s) => s.id === task.id);
+    if (idx < 0 || idx >= siblings.length - 1) return { success: false, error: "已是同级中的最后一个任务，无法继续下移" };
+
+    const nextSibling = siblings[idx + 1];
+    const seqA = task.sequenceNo;
+    const seqB = nextSibling.sequenceNo;
+
+    // 三步交换：先置临时负值 → 写目标值 → 写回
+    await prisma.$transaction(async (tx) => {
+      await tx.managedTask.update({ where: { id: task.id }, data: { sequenceNo: -seqA } });
+      await tx.managedTask.update({ where: { id: nextSibling.id }, data: { sequenceNo: seqA } });
+      await tx.managedTask.update({ where: { id: task.id }, data: { sequenceNo: seqB } });
+    });
+
+    await recordAuditLog("UPDATE", "WBS", `下移了任务顺序：${task.title}`);
+    revalidatePath("/managed-tasks");
+    return { success: true };
+  } catch (error) {
+    console.error("[moveTaskDown]", error);
+    return { success: false, error: error instanceof Error ? error.message : "下移任务失败" };
   }
 }
 

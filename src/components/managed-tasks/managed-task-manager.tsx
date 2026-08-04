@@ -2,25 +2,37 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   CalendarDays,
   ChevronDown,
   ChevronRight,
+  Copy,
+  CornerDownRight,
+  CornerUpLeft,
   Edit3,
   Folder,
   Info,
   Layers3,
+  Lock,
   Plus,
   Search,
   Table2,
   Trash2,
+  User,
   UserRound,
   UsersRound,
   X,
 } from "lucide-react";
 import TaskGridView from "./task-grid-view";
 import {
+  copyManagedTask,
   createManagedTask,
   deleteOrCancelManagedTask,
+  indentManagedTask,
+  moveTaskDown,
+  moveTaskUp,
+  outdentManagedTask,
   saveWorkCalendar,
   updateManagedTask,
 } from "@/actions/managed-tasks";
@@ -57,6 +69,7 @@ type TaskItem = {
   projectVersionId: string | null;
   notes: string | null;
   children: Array<{ id: string }>;
+  canManage?: boolean;
 };
 type CalendarItem = {
   id: string;
@@ -147,117 +160,48 @@ const initialCalendar = {
   days: [] as Array<{ date: string; type: string; standardHours: number | ""; label: string; notes: string }>,
 };
 
+import { ExecutorPickerModal } from "./executor-picker-modal";
+
 const controlClass = "min-h-10 rounded-lg border border-border bg-input px-3 py-2 text-sm text-foreground outline-none focus:border-indigo-500";
 
-// 弹窗用 Autocomplete 执行人选择器（本组优先 + 打字搜索）
+// 弹窗用 Autocomplete 执行人选择器（唤起全局 ExecutorPickerModal）
 function ModalExecutorPicker({
   value,
   displayName,
-  users,
-  teamMemberIds,
+  teamId,
+  context,
   controlClass: cls,
   onChange,
 }: {
   value: string;
   displayName: string;
-  users: Array<{ id: string; name: string }>;
-  teamMemberIds: Set<string>;
+  teamId?: string;
+  context: Context;
   controlClass: string;
   onChange: (userId: string) => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [search, setSearch] = useState("");
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setOpen(false);
-        setSearch("");
-      }
-    }
-    if (open) {
-      document.addEventListener("mousedown", handleClickOutside);
-      return () => document.removeEventListener("mousedown", handleClickOutside);
-    }
-  }, [open]);
-
-  const q = search.trim().toLowerCase();
-  const filtered = q ? users.filter((u) => u.name.toLowerCase().includes(q)) : users;
-  const teamUsers = filtered.filter((u) => teamMemberIds.has(u.id));
-  const otherUsers = filtered.filter((u) => !teamMemberIds.has(u.id));
-
-  const handleSelect = (userId: string) => {
-    onChange(userId);
-    setOpen(false);
-    setSearch("");
-  };
 
   return (
-    <div ref={containerRef} className="relative w-full">
-      <input
-        value={open ? search : displayName}
-        placeholder="未分配"
-        onChange={(e) => setSearch(e.target.value)}
-        onFocus={() => { setOpen(true); setSearch(""); }}
-        className={`${cls} w-full cursor-pointer`}
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className={`${cls} w-full text-left cursor-pointer flex items-center justify-between hover:border-indigo-500/50 transition`}
+      >
+        <span className="truncate">{displayName || "未分配"}</span>
+        <User className="h-4 w-4 text-muted-foreground/40 shrink-0 ml-1" />
+      </button>
+
+      <ExecutorPickerModal
+        isOpen={open}
+        onClose={() => setOpen(false)}
+        value={value}
+        teamId={teamId}
+        context={context}
+        onSelect={onChange}
       />
-      {open && (
-        <div className="absolute left-0 top-full z-50 mt-1 max-h-60 w-full overflow-auto rounded-lg border border-border bg-card shadow-2xl">
-          <button
-            type="button"
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => handleSelect("")}
-            className="w-full px-3 py-2 text-left text-sm text-muted-foreground hover:bg-indigo-500/10 transition"
-          >
-            -- 未分配 --
-          </button>
-          {teamUsers.length > 0 && (
-            <>
-              <div className="px-3 py-1.5 text-[11px] font-semibold text-indigo-400 bg-indigo-500/5 select-none">
-                ★ 本组成员
-              </div>
-              {teamUsers.map((u) => (
-                <button
-                  type="button"
-                  key={u.id}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleSelect(u.id)}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-indigo-500/10 transition flex items-center gap-1.5 ${
-                    u.id === value ? "bg-indigo-500/15 text-indigo-400 font-semibold" : "text-foreground"
-                  }`}
-                >
-                  <span className="text-indigo-400">★</span> {u.name}
-                </button>
-              ))}
-            </>
-          )}
-          {otherUsers.length > 0 && (
-            <>
-              <div className="px-3 py-1.5 text-[11px] font-semibold text-muted-foreground/60 bg-white/[0.02] select-none">
-                其他人员
-              </div>
-              {otherUsers.map((u) => (
-                <button
-                  type="button"
-                  key={u.id}
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={() => handleSelect(u.id)}
-                  className={`w-full px-3 py-2 text-left text-sm hover:bg-white/[0.06] transition ${
-                    u.id === value ? "bg-indigo-500/10 text-indigo-400 font-semibold" : "text-foreground"
-                  }`}
-                >
-                  👤 {u.name}
-                </button>
-              ))}
-            </>
-          )}
-          {teamUsers.length === 0 && otherUsers.length === 0 && (
-            <div className="px-3 py-3 text-sm text-muted-foreground/50 text-center">无匹配人员</div>
-          )}
-        </div>
-      )}
-    </div>
+    </>
   );
 }
 
@@ -265,10 +209,12 @@ function shortDate(value: string | null) {
   return value ? value.slice(0, 10) : "-";
 }
 
-function dateTimeLocal(value: string | null) {
+function dateOnlyString(value: string | null) {
   if (!value) return "";
   const date = new Date(value);
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+  if (isNaN(date.getTime())) return "";
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 function taskNo(task: TaskItem) {
@@ -546,6 +492,12 @@ function barGeometry(task: TaskItem, days: Date[], scale: "day" | "week" | "mont
   if (!task.planStartDate || !task.planEndDate) return null;
   const start = new Date(task.planStartDate);
   const end = new Date(task.planEndDate);
+
+  // 在日视图下，确保单日排期任务条在 24 小时全天网格中按照上下班时间（08:00 - 18:00）精准渲染定位
+  if (scale === "day") {
+    start.setHours(8, 0, 0, 0);
+    end.setHours(18, 0, 0, 0);
+  }
   
   const { start: timelineStart, end: timelineEnd } = getTimelineRange(scale, days);
   
@@ -573,6 +525,11 @@ function TimelineBoard({
   onCreateChild,
   onEdit,
   onRemove,
+  onIndent,
+  onOutdent,
+  onCopy,
+  onMoveUp,
+  onMoveDown,
   getDayInfo,
   collapsedIds,
   toggleCollapse,
@@ -585,6 +542,11 @@ function TimelineBoard({
   onCreateChild: (id: string) => void;
   onEdit: (task: TaskItem) => void;
   onRemove: (id: string) => void;
+  onIndent?: (id: string) => void;
+  onOutdent?: (id: string) => void;
+  onCopy?: (id: string) => void;
+  onMoveUp?: (id: string) => void;
+  onMoveDown?: (id: string) => void;
   getDayInfo: (date: Date) => { type: string; isWorkday: boolean; isRest: boolean; label: string | null };
   collapsedIds: Set<string>;
   toggleCollapse: (id: string) => void;
@@ -746,14 +708,11 @@ function TimelineBoard({
                   </div>
                   {groupBar && (
                     <div 
-                      className="absolute top-2 h-6 rounded border px-2 py-0.5 shadow-sm bg-indigo-600/85 dark:bg-indigo-500/35 border-indigo-700/90 text-white font-bold"
+                      className="absolute top-2 h-6 rounded border px-2 py-0.5 shadow-sm bg-indigo-600/85 dark:bg-indigo-500/35 border-indigo-700/90 text-white font-bold flex items-center"
                       style={{ left: `calc(${groupBar.left}% + 2px)`, width: `calc(${groupBar.width}% - 4px)` }}
                     >
-                      <div className="truncate text-[10px] font-bold flex items-center justify-between text-white">
-                        <span>排期汇总：{row.progressPercent}%</span>
-                      </div>
-                      <div className="h-0.5 rounded-full bg-white/30 mt-0.5">
-                        <div className="h-0.5 rounded-full bg-emerald-400" style={{ width: `${row.progressPercent}%` }} />
+                      <div className="truncate text-[10px] font-bold text-white">
+                        {row.label} ({row.planStartDate ? row.planStartDate.slice(5) : ""} ~ {row.planEndDate ? row.planEndDate.slice(5) : ""})
                       </div>
                     </div>
                   )}
@@ -798,11 +757,84 @@ function TimelineBoard({
                   {/* 标题与操作按钮同一行 */}
                   <div className="flex items-center justify-between gap-2 min-h-[24px]">
                     <div className="truncate text-sm font-semibold text-foreground" title={task.title}>{task.title}</div>
-                    <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
-                      <button title="新增子任务" onClick={() => onCreateChild(task.id)} disabled={task.level >= 3} className="rounded p-1 text-indigo-300 hover:bg-indigo-500/10 disabled:opacity-30"><Plus className="h-3.5 w-3.5" /></button>
-                      <button title="编辑" onClick={() => onEdit(task)} className="rounded p-1 text-sky-300 hover:bg-sky-500/10"><Edit3 className="h-3.5 w-3.5" /></button>
-                      <button title="删除/取消" onClick={() => onRemove(task.id)} className="rounded p-1 text-red-300 hover:bg-red-500/10"><Trash2 className="h-3.5 w-3.5" /></button>
-                    </div>
+                    {task.canManage !== false ? (
+                      <div className="hidden shrink-0 items-center gap-0.5 group-hover:flex">
+                        {onMoveUp && (
+                          <button
+                            title="上移（与上方同级任务交换顺序）"
+                            onClick={() => onMoveUp(task.id)}
+                            className="rounded p-1 text-violet-400 hover:bg-violet-500/20 cursor-pointer"
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {onMoveDown && (
+                          <button
+                            title="下移（与下方同级任务交换顺序）"
+                            onClick={() => onMoveDown(task.id)}
+                            className="rounded p-1 text-violet-400 hover:bg-violet-500/20 cursor-pointer"
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {onOutdent && (
+                          <button
+                            title="升级（提升为上级任务）"
+                            disabled={task.level <= 1}
+                            onClick={() => onOutdent(task.id)}
+                            className="rounded p-1 text-sky-400 hover:bg-sky-500/20 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            <CornerUpLeft className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {onIndent && (
+                          <button
+                            title="降级（缩进为子任务）"
+                            disabled={task.level >= 3}
+                            onClick={() => onIndent(task.id)}
+                            className="rounded p-1 text-amber-400 hover:bg-amber-500/20 disabled:opacity-20 cursor-pointer disabled:cursor-not-allowed"
+                          >
+                            <CornerDownRight className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {onCopy && (
+                          <button
+                            title="复制此任务及分支"
+                            onClick={() => onCopy(task.id)}
+                            className="rounded p-1 text-emerald-400 hover:bg-emerald-500/20 cursor-pointer"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {task.level < 3 && (
+                          <button
+                            title="新增子任务"
+                            onClick={() => onCreateChild(task.id)}
+                            className="rounded p-1 text-indigo-300 hover:bg-indigo-500/10 cursor-pointer"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        <button
+                          title="编辑"
+                          onClick={() => onEdit(task)}
+                          className="rounded p-1 text-sky-300 hover:bg-sky-500/10 cursor-pointer"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          title="删除/取消"
+                          onClick={() => onRemove(task.id)}
+                          className="rounded p-1 text-red-300 hover:bg-red-500/10 cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span title="只读视图（无编辑权限）" className="flex items-center gap-1 text-[11px] text-muted-foreground/40 select-none">
+                        <Lock className="h-3.5 w-3.5" />
+                      </span>
+                    )}
                   </div>
                   {/* 下一行：小组/计划人日/实际人日/执行人 */}
                   <div className="mt-1 text-xs text-muted-foreground">{row.subtitle}</div>
@@ -851,10 +883,7 @@ function TimelineBoard({
                     }}
                     onMouseLeave={() => setHoveredBar(null)}
                   >
-                    <div className="truncate text-[11px] font-bold text-white">{task.progressPercent}% - {task.title}</div>
-                    <div className="mt-1 h-1 rounded-full bg-black/20">
-                      <div className="h-1 rounded-full bg-current" style={{ width: `${task.progressPercent}%` }} />
-                    </div>
+                    <div className="truncate text-[11px] font-bold text-white flex items-center h-full">{task.title}</div>
                   </div>
                 )}
               </div>
@@ -929,10 +958,6 @@ function TimelineBoard({
                   </span>
                 </div>
               )}
-              <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">当前进度</span>
-                <span className="font-semibold text-indigo-500 dark:text-indigo-400">{task.progressPercent}%</span>
-              </div>
               <div className="flex justify-between items-center">
                 <span className="text-muted-foreground">当前状态</span>
                 <span className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[9px] font-semibold border ${
@@ -1021,7 +1046,7 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       }
     }
   }, []);
-  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>([]);
+  const [selectedTeamIds, setSelectedTeamIds] = useState<string[]>(() => currentUserTeamIds);
   const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
   const teamDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -1243,12 +1268,23 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
   }, [context.monthlyItems, editingTask?.productLineTeam?.id, form.monthlyPlanId, form.monthlyItemType, form.monthlyItemId, currentUserTeamIds]);
 
   const openCreate = (parentId = "") => {
+    if (parentId) {
+      const parentTask = tasks.find((t) => t.id === parentId);
+      if (parentTask && parentTask.canManage === false) {
+        alert("只读模式：您无权在其他团队的任务下新增子任务");
+        return;
+      }
+    }
     setEditingId(null);
     setForm({ ...initialForm, parentId });
     setError("");
     setModalOpen(true);
   };
   const openEdit = (task: TaskItem) => {
+    if (task.canManage === false) {
+      alert("只读模式：您无权编辑其他团队的任务");
+      return;
+    }
     setEditingId(task.id);
     setForm({
       parentId: task.parentId || "",
@@ -1257,13 +1293,13 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       category: task.category || "DEVELOPMENT",
       sdlcNode: task.sdlcNode || "",
       status: task.status,
-      planStartDate: task.planStartDate ? dateTimeLocal(task.planStartDate) : "",
-      planEndDate: task.planEndDate ? dateTimeLocal(task.planEndDate) : "",
+      planStartDate: task.planStartDate ? dateOnlyString(task.planStartDate) : "",
+      planEndDate: task.planEndDate ? dateOnlyString(task.planEndDate) : "",
       plannedWorkdays: task.plannedWorkdays,
       actualWorkdays: task.actualWorkdays,
       progressPercent: task.progressPercent,
-      actualStartAt: dateTimeLocal(task.actualStartAt),
-      actualFinishAt: dateTimeLocal(task.actualFinishAt),
+      actualStartAt: dateOnlyString(task.actualStartAt),
+      actualFinishAt: dateOnlyString(task.actualFinishAt),
       executorId: task.executorId || "",
       monthlyPlanId: task.monthlyPlanId || "",
       monthlyItemType: task.monthlyItemType || "",
@@ -1284,10 +1320,60 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       setModalOpen(false);
     });
   const remove = (id: string) => {
-    if (!confirm("无执行数据的任务会删除；已有执行数据的任务会改为已取消。确认继续？")) return;
+    const target = tasks.find((t) => t.id === id);
+    if (target && target.canManage === false) {
+      alert("只读模式：您无权删除其他团队的任务");
+      return;
+    }
+    if (!confirm("确定要彻底删除该任务及其所有下级子任务吗？此操作无法撤销。")) return;
     startTransition(async () => {
       const result = await deleteOrCancelManagedTask(id);
       if (!result.success) alert(result.error);
+    });
+  };
+
+  const handleIndent = (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (target && target.canManage === false) return alert("只读模式：您无权降级其他团队的任务");
+    startTransition(async () => {
+      const res = await indentManagedTask(id);
+      if (!res.success) alert(res.error || "降级操作失败");
+    });
+  };
+
+  const handleOutdent = (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (target && target.canManage === false) return alert("只读模式：您无权升级其他团队的任务");
+    startTransition(async () => {
+      const res = await outdentManagedTask(id);
+      if (!res.success) alert(res.error || "升级操作失败");
+    });
+  };
+
+  const handleCopy = (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (target && target.canManage === false) return alert("只读模式：您无权复制其他团队的任务");
+    startTransition(async () => {
+      const res = await copyManagedTask(id);
+      if (!res.success) alert(res.error || "复制任务失败");
+    });
+  };
+
+  const handleMoveUp = (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (target && target.canManage === false) return alert("只读模式：您无权调整其他团队的任务顺序");
+    startTransition(async () => {
+      const res = await moveTaskUp(id);
+      if (!res.success) alert(res.error || "上移失败");
+    });
+  };
+
+  const handleMoveDown = (id: string) => {
+    const target = tasks.find((t) => t.id === id);
+    if (target && target.canManage === false) return alert("只读模式：您无权调整其他团队的任务顺序");
+    startTransition(async () => {
+      const res = await moveTaskDown(id);
+      if (!res.success) alert(res.error || "下移失败");
     });
   };
 
@@ -1532,7 +1618,24 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
           onRemove={remove}
         />
       ) : (
-        <TimelineBoard rows={rows} days={days} mode={view} scale={scale} onCreateChild={openCreate} onEdit={openEdit} onRemove={remove} getDayInfo={getDayInfo} collapsedIds={collapsedIds} toggleCollapse={toggleCollapse} taskIdToL1Title={taskIdToL1Title} />
+        <TimelineBoard
+          rows={rows}
+          days={days}
+          mode={view}
+          scale={scale}
+          onCreateChild={openCreate}
+          onEdit={openEdit}
+          onRemove={remove}
+          onIndent={handleIndent}
+          onOutdent={handleOutdent}
+          onCopy={handleCopy}
+          onMoveUp={handleMoveUp}
+          onMoveDown={handleMoveDown}
+          getDayInfo={getDayInfo}
+          collapsedIds={collapsedIds}
+          toggleCollapse={toggleCollapse}
+          taskIdToL1Title={taskIdToL1Title}
+        />
       )}
 
       {modalOpen && (
@@ -1549,24 +1652,21 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
               {selectedParent?.category === "DEVELOPMENT" && selectedParent.level === 1 && <label className="space-y-1 text-xs text-muted-foreground">SDLC 节点<select value={form.sdlcNode} onChange={(event) => setForm((current) => ({ ...current, sdlcNode: event.target.value }))} className={`${controlClass} w-full`}><option value="">不选择</option>{sdlcNodes.map((node) => <option key={node} value={node}>{sdlcLabels[node]}</option>)}</select></label>}
               <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">任务名称<input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} className={`${controlClass} w-full`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">任务说明<textarea value={form.description} onChange={(event) => setForm((current) => ({ ...current, description: event.target.value }))} rows={3} className={`${controlClass} w-full`} /></label>
-              <label className="space-y-1 text-xs text-muted-foreground">计划开始<input type="datetime-local" value={form.planStartDate} onChange={(event) => setForm((current) => ({ ...current, planStartDate: event.target.value }))} className={`${controlClass} w-full`} /></label>
-              <label className="space-y-1 text-xs text-muted-foreground">计划结束<input type="datetime-local" value={form.planEndDate} onChange={(event) => setForm((current) => ({ ...current, planEndDate: event.target.value }))} className={`${controlClass} w-full`} /></label>
+              <label className="space-y-1 text-xs text-muted-foreground">计划开始{hasChildren ? "（由子任务汇总）" : ""}<input type="date" value={form.planStartDate} readOnly={hasChildren} disabled={hasChildren} onChange={(event) => setForm((current) => ({ ...current, planStartDate: event.target.value }))} className={`${controlClass} w-full ${hasChildren ? "bg-input/50 cursor-not-allowed" : ""}`} /></label>
+              <label className="space-y-1 text-xs text-muted-foreground">计划结束{hasChildren ? "（由子任务汇总）" : ""}<input type="date" value={form.planEndDate} readOnly={hasChildren} disabled={hasChildren} onChange={(event) => setForm((current) => ({ ...current, planEndDate: event.target.value }))} className={`${controlClass} w-full ${hasChildren ? "bg-input/50 cursor-not-allowed" : ""}`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground">计划人日（系统自动计算）<input type="number" value={form.plannedWorkdays} readOnly className={`${controlClass} w-full bg-input/50 cursor-not-allowed`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground">实际人日（系统自动计算）<input type="number" value={form.actualWorkdays} readOnly className={`${controlClass} w-full bg-input/50 cursor-not-allowed`} /></label>
               <label className="space-y-1 text-xs text-muted-foreground">执行人
                 {(() => {
                   // 弹窗中的 Autocomplete 执行人选择器（本组优先 + 打字搜索）
                   const modalTeamId = selectedParent?.productLineTeam?.id || editingTask?.productLineTeam?.id || (selectedTeamIds.length === 1 ? selectedTeamIds[0] : "");
-                  const teamMemberIdSet = new Set(
-                    (context.teams.find((t) => t.id === modalTeamId)?.members || []).map((m) => m.userId)
-                  );
                   const selectedUser = context.users.find((u) => u.id === form.executorId);
                   return (
                     <ModalExecutorPicker
                       value={form.executorId}
                       displayName={selectedUser?.name || ""}
-                      users={context.users}
-                      teamMemberIds={teamMemberIdSet}
+                      teamId={modalTeamId}
+                      context={context}
                       controlClass={controlClass}
                       onChange={(userId) => setForm((current) => ({
                         ...current,
@@ -1579,9 +1679,8 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
                 })()}
               </label>
               <label className="space-y-1 text-xs text-muted-foreground">状态<select value={form.status} disabled={hasChildren} onChange={(event) => setForm((current) => ({ ...current, status: event.target.value }))} className={`${controlClass} w-full ${hasChildren ? "bg-input/50 cursor-not-allowed" : ""}`}>{statuses.map((status) => <option key={status} value={status}>{statusLabels[status]}</option>)}</select></label>
-              <label className="space-y-1 text-xs text-muted-foreground">进度<input type="number" min={0} max={100} value={form.progressPercent} readOnly={hasChildren} onChange={(event) => setForm((current) => ({ ...current, progressPercent: Number(event.target.value) }))} className={`${controlClass} w-full ${hasChildren ? "bg-input/50 cursor-not-allowed" : ""}`} /></label>
-              <label className="space-y-1 text-xs text-muted-foreground">实际开始<input type="datetime-local" value={form.actualStartAt} onChange={(event) => setForm((current) => ({ ...current, actualStartAt: event.target.value }))} className={`${controlClass} w-full`} /></label>
-              <label className="space-y-1 text-xs text-muted-foreground">实际完成<input type="datetime-local" value={form.actualFinishAt} onChange={(event) => setForm((current) => ({ ...current, actualFinishAt: event.target.value }))} className={`${controlClass} w-full`} /></label>
+              <label className="space-y-1 text-xs text-muted-foreground">实际开始{hasChildren ? "（由子任务汇总）" : ""}<input type="date" value={form.actualStartAt} readOnly={hasChildren} disabled={hasChildren} onChange={(event) => setForm((current) => ({ ...current, actualStartAt: event.target.value }))} className={`${controlClass} w-full ${hasChildren ? "bg-input/50 cursor-not-allowed" : ""}`} /></label>
+              <label className="space-y-1 text-xs text-muted-foreground">实际完成{hasChildren ? "（由子任务汇总）" : ""}<input type="date" value={form.actualFinishAt} readOnly={hasChildren} disabled={hasChildren} onChange={(event) => setForm((current) => ({ ...current, actualFinishAt: event.target.value }))} className={`${controlClass} w-full ${hasChildren ? "bg-input/50 cursor-not-allowed" : ""}`} /></label>
               {!selectedParent && <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">关联月度计划事项<select value={`${form.monthlyPlanId}|${form.monthlyItemType}|${form.monthlyItemId}`} onChange={(event) => { const [monthlyPlanId, monthlyItemType, monthlyItemId] = event.target.value.split("|"); setForm((current) => ({ ...current, monthlyPlanId: monthlyPlanId || "", monthlyItemType: monthlyItemType || "", monthlyItemId: monthlyItemId || "" })); }} className={`${controlClass} w-full`}><option value="||">不关联月度计划事项</option>{modalMonthlyItems.map((item) => <option key={`${item.itemType}-${item.itemId}`} value={`${item.planId}|${item.itemType}|${item.itemId}`}>{item.label}</option>)}</select></label>}
               {!selectedParent && <><label className="space-y-1 text-xs text-muted-foreground">关联版本类型<select value={form.versionType} onChange={(event) => setForm((current) => ({ ...current, versionType: event.target.value, versionId: "" }))} className={`${controlClass} w-full`}><option value="">不关联</option><option value="PRODUCT">产品版本</option><option value="PROJECT">项目版本</option></select></label><label className="space-y-1 text-xs text-muted-foreground">关联版本<select value={form.versionId} disabled={!form.versionType} onChange={(event) => setForm((current) => ({ ...current, versionId: event.target.value }))} className={`${controlClass} w-full`}><option value="">请选择</option>{versionOptions.map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}</select></label></>}
               <label className="space-y-1 text-xs text-muted-foreground md:col-span-2">备注<textarea value={form.notes} onChange={(event) => setForm((current) => ({ ...current, notes: event.target.value }))} rows={2} className={`${controlClass} w-full`} /></label>
