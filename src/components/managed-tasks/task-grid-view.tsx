@@ -1009,6 +1009,12 @@ export default function TaskGridView({
     });
   };
 
+  const handleRemoveTask = (taskId: string) => {
+    setOptimisticTasks((prev) => prev.filter((t) => t.id !== taskId && t.parentId !== taskId));
+    setDraftTasks((prev) => prev.filter((t) => t.id !== taskId && t.parentId !== taskId));
+    onRemove(taskId);
+  };
+
   return (
     <div className="h-[calc(100vh-179px)] min-h-[450px] overflow-auto rounded-xl border border-border bg-card shadow-2xl">
       <div className="w-full min-w-full">
@@ -1087,7 +1093,7 @@ export default function TaskGridView({
                 context={context}
                 onToggleCollapse={toggleCollapse}
                 onCreateSubTask={handleAddDraftSubTask}
-                onRemove={onRemove}
+                onRemove={handleRemoveTask}
                 onFieldChange={handleFieldChange}
                 onSaveDraft={handleSaveDraft}
                 onDiscardDraft={handleDiscardDraft}

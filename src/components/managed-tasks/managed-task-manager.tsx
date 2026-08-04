@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
   ArrowDown,
@@ -1340,6 +1341,7 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       if (!result.success) return setError(result.error || "保存失败");
       setModalOpen(false);
     });
+  const router = useRouter();
   const remove = (id: string) => {
     const target = tasks.find((t) => t.id === id);
     if (target && target.canManage === false) {
@@ -1349,7 +1351,11 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
     if (!confirm("确定要彻底删除该任务及其所有下级子任务吗？此操作无法撤销。")) return;
     startTransition(async () => {
       const result = await deleteOrCancelManagedTask(id);
-      if (!result.success) alert(result.error);
+      if (!result.success) {
+        alert(result.error);
+      } else {
+        router.refresh();
+      }
     });
   };
 
