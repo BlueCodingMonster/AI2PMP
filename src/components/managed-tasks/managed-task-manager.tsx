@@ -1028,13 +1028,16 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
   const [view, setView] = useState<ViewMode>("wbs");
   const [scale, setScale] = useState<"day" | "week" | "month" | "quarter">("month");
   const [query, setQuery] = useState("");
-  const [filterDate, setFilterDate] = useState<string>(() => {
-    const today = new Date();
-    const y = today.getFullYear();
-    const m = String(today.getMonth() + 1).padStart(2, "0");
-    const d = String(today.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
-  });
+  const STATUS_OPTIONS = [
+    { id: "UNSCHEDULED", label: "待排期" },
+    { id: "TODO", label: "待办" },
+    { id: "IN_PROGRESS", label: "进行中" },
+    { id: "PAUSED", label: "已暂停" },
+    { id: "DONE", label: "已完成" },
+    { id: "CANCELLED", label: "已取消" },
+  ];
+
+  const [filterDate, setFilterDate] = useState<string>("");
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -1050,15 +1053,31 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
   const [isTeamDropdownOpen, setIsTeamDropdownOpen] = useState(false);
   const teamDropdownRef = useRef<HTMLDivElement>(null);
 
+  const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (teamDropdownRef.current && !teamDropdownRef.current.contains(event.target as Node)) {
         setIsTeamDropdownOpen(false);
       }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(event.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  const selectedStatusesLabel = () => {
+    if (selectedStatuses.length === 0) return "所有状态";
+    if (selectedStatuses.length === 1) {
+      const opt = STATUS_OPTIONS.find((s) => s.id === selectedStatuses[0]);
+      return opt ? opt.label : "所有状态";
+    }
+    return `已选 ${selectedStatuses.length} 个状态`;
+  };
 
   const selectedTeamsLabel = () => {
     if (selectedTeamIds.length === 0) return "选择团队";
@@ -1147,8 +1166,9 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       }
 
       const matchesTeam = selectedTeamIds.length === 0 || selectedTeamIds.includes(task.productLineTeam.id);
+      const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(task.status);
 
-      if (matchesDate && matchesTeam && (!query || text.includes(query.toLowerCase())) && (!executorFilter || task.executorId === executorFilter)) {
+      if (matchesDate && matchesTeam && matchesStatus && (!query || text.includes(query.toLowerCase())) && (!executorFilter || task.executorId === executorFilter)) {
         directMatchIds.add(task.id);
       }
     });
@@ -1497,29 +1517,31 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务名称/成果书..." className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-3 text-sm text-foreground outline-none focus:border-indigo-500" />
           </label>
-          <div className="flex rounded-lg border border-border bg-card p-1 shadow-sm">
-            {[
-              { key: "day", label: "日" },
-              { key: "week", label: "周" },
-              { key: "month", label: "月" },
-              { key: "quarter", label: "季" },
-            ].map((item) => {
-              const active = scale === item.key;
-              return (
-                <button
-                  key={item.key}
-                  onClick={() => setScale(item.key as any)}
-                  className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
-                    active
-                      ? "bg-indigo-600 text-white font-bold shadow-sm"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              );
-            })}
-          </div>
+          {view !== "grid" && (
+            <div className="flex rounded-lg border border-border bg-card p-1 shadow-sm">
+              {[
+                { key: "day", label: "日" },
+                { key: "week", label: "周" },
+                { key: "month", label: "月" },
+                { key: "quarter", label: "季" },
+              ].map((item) => {
+                const active = scale === item.key;
+                return (
+                  <button
+                    key={item.key}
+                    onClick={() => setScale(item.key as any)}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                      active
+                        ? "bg-indigo-600 text-white font-bold shadow-sm"
+                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                    }`}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="relative">
             <input
               type="date"
@@ -1536,6 +1558,59 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
               >
                 <X className="h-3.5 w-3.5" />
               </button>
+            )}
+          </div>
+          <div ref={statusDropdownRef} className="relative min-w-[140px]">
+            <button
+              type="button"
+              onClick={() => setIsStatusDropdownOpen(!isStatusDropdownOpen)}
+              className={`${controlClass} flex w-full items-center justify-between gap-2 text-left cursor-pointer`}
+            >
+              <span className="truncate">{selectedStatusesLabel()}</span>
+              <span className="text-xs text-muted-foreground ml-1">▼</span>
+            </button>
+            {isStatusDropdownOpen && (
+              <div className="absolute left-0 top-full mt-1.5 w-52 rounded-xl border border-border bg-card p-2 shadow-2xl z-50 max-h-64 overflow-y-auto space-y-1 backdrop-blur-md">
+                <div className="flex items-center justify-between border-b border-border/60 pb-1.5 px-2 mb-1 text-xs text-muted-foreground font-medium">
+                  <span>任务状态筛选</span>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStatuses(STATUS_OPTIONS.map((s) => s.id))}
+                      className="text-indigo-400 hover:underline cursor-pointer"
+                    >
+                      全选
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedStatuses([])}
+                      className="text-muted-foreground hover:underline cursor-pointer"
+                    >
+                      清空
+                    </button>
+                  </div>
+                </div>
+                {STATUS_OPTIONS.map((statusOpt) => {
+                  const isChecked = selectedStatuses.includes(statusOpt.id);
+                  return (
+                    <label key={statusOpt.id} className="flex items-center gap-2 px-2 py-1.5 text-xs text-foreground hover:bg-white/[0.05] rounded-lg cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={() => {
+                          setSelectedStatuses((prev) =>
+                            prev.includes(statusOpt.id)
+                              ? prev.filter((id) => id !== statusOpt.id)
+                              : [...prev, statusOpt.id]
+                          );
+                        }}
+                        className="rounded border-border bg-transparent text-indigo-600 focus:ring-0 focus:ring-offset-0 cursor-pointer"
+                      />
+                      <span className="truncate">{statusOpt.label}</span>
+                    </label>
+                  );
+                })}
+              </div>
             )}
           </div>
           <div ref={teamDropdownRef} className="relative min-w-[160px]">
