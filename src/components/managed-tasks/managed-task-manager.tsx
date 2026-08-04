@@ -1132,7 +1132,7 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       return { start, end };
     }
     return { start: null, end: null };
-  }, [filterDate, scale]);
+  }, [view, gridStartDate, gridEndDate, filterDate, scale]);
   const [form, setForm] = useState(initialForm);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1163,11 +1163,13 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       const text = `${task.title} ${taskNo(task)} ${task.executor?.name || ""} ${task.productLineTeam.name}`.toLowerCase();
 
       let matchesDate = true;
-      if (filterStart && filterEnd) {
+      if (filterStart || filterEnd) {
         if (task.planStartDate && task.planEndDate) {
           const start = new Date(task.planStartDate);
           const end = new Date(task.planEndDate);
-          matchesDate = start <= filterEnd && end >= filterStart;
+          const startOk = filterStart ? end >= filterStart : true;
+          const endOk = filterEnd ? start <= filterEnd : true;
+          matchesDate = startOk && endOk;
         } else {
           // 未填写排期时间的待排期任务/节点（如 能碳管理中心V1.0.0）默认保留展示，避免被时间范围硬截断
           matchesDate = true;
@@ -1188,7 +1190,7 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
     }
 
     // WBS 模式：保证树结构完整性
-    // 向上补全祖先，向下补全后代
+    // 向上补全祖先（保证匹配节点的父级能够正确在 UI 展开渲染）
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
     const includedIds = new Set(directMatchIds);
 
@@ -1202,19 +1204,8 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
       }
     });
 
-    // 向下：把每个匹配任务的所有后代加进来（包括被向上补全的祖先任务的后代，确保展开父节点时能看到完整子树和未排期节点）
-    const addDescendants = (parentId: string) => {
-      tasks.forEach((t) => {
-        if (t.parentId === parentId && !includedIds.has(t.id)) {
-          includedIds.add(t.id);
-          addDescendants(t.id);
-        }
-      });
-    };
-    Array.from(includedIds).forEach((id) => addDescendants(id));
-
     return tasks.filter((t) => includedIds.has(t.id));
-  }, [tasks, query, selectedTeamIds, executorFilter, filterStart, filterEnd, view]);
+  }, [tasks, query, selectedTeamIds, selectedStatuses, executorFilter, filterStart, filterEnd, view]);
 
   useEffect(() => {
     if (view === "person") {
