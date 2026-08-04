@@ -1090,7 +1090,16 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
 
   const [executorFilter, setExecutorFilter] = useState("");
 
+  const [gridStartDate, setGridStartDate] = useState<string>("");
+  const [gridEndDate, setGridEndDate] = useState<string>("");
+
   const { start: filterStart, end: filterEnd } = useMemo(() => {
+    if (view === "grid") {
+      const start = gridStartDate ? new Date(`${gridStartDate}T00:00:00`) : null;
+      const end = gridEndDate ? new Date(`${gridEndDate}T23:59:59.999`) : null;
+      return { start, end };
+    }
+
     if (!filterDate) return { start: null, end: null };
     const [y, m, d] = filterDate.split("-").map(Number);
     const base = new Date(y, m - 1, d);
@@ -1517,49 +1526,94 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="搜索任务名称/成果书..." className="h-10 w-full rounded-lg border border-border bg-input pl-9 pr-3 text-sm text-foreground outline-none focus:border-indigo-500" />
           </label>
-          {view !== "grid" && (
-            <div className="flex rounded-lg border border-border bg-card p-1 shadow-sm">
-              {[
-                { key: "day", label: "日" },
-                { key: "week", label: "周" },
-                { key: "month", label: "月" },
-                { key: "quarter", label: "季" },
-              ].map((item) => {
-                const active = scale === item.key;
-                return (
+          {view === "grid" ? (
+            <div className="flex items-center gap-1 bg-card border border-border rounded-lg px-2 py-1 shadow-sm">
+              <span className="text-xs text-muted-foreground font-medium mr-1">排期:</span>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={gridStartDate}
+                  onChange={(event) => setGridStartDate(event.target.value)}
+                  className={`${controlClass} text-xs py-1 px-2 text-foreground cursor-pointer pr-6`}
+                  style={{ colorScheme: "dark" }}
+                  placeholder="开始日期"
+                />
+                {gridStartDate && (
                   <button
-                    key={item.key}
-                    onClick={() => setScale(item.key as any)}
-                    className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
-                      active
-                        ? "bg-indigo-600 text-white font-bold shadow-sm"
-                        : "text-muted-foreground hover:bg-muted hover:text-foreground"
-                    }`}
+                    onClick={() => setGridStartDate("")}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-white hover:bg-accent transition"
+                    title="清空开始日期"
                   >
-                    {item.label}
+                    <X className="h-3 w-3" />
                   </button>
-                );
-              })}
+                )}
+              </div>
+              <span className="text-xs text-muted-foreground font-medium">至</span>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={gridEndDate}
+                  onChange={(event) => setGridEndDate(event.target.value)}
+                  className={`${controlClass} text-xs py-1 px-2 text-foreground cursor-pointer pr-6`}
+                  style={{ colorScheme: "dark" }}
+                  placeholder="结束日期"
+                />
+                {gridEndDate && (
+                  <button
+                    onClick={() => setGridEndDate("")}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-white hover:bg-accent transition"
+                    title="清空结束日期"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
             </div>
+          ) : (
+            <>
+              <div className="flex rounded-lg border border-border bg-card p-1 shadow-sm">
+                {[
+                  { key: "day", label: "日" },
+                  { key: "week", label: "周" },
+                  { key: "month", label: "月" },
+                  { key: "quarter", label: "季" },
+                ].map((item) => {
+                  const active = scale === item.key;
+                  return (
+                    <button
+                      key={item.key}
+                      onClick={() => setScale(item.key as any)}
+                      className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                        active
+                          ? "bg-indigo-600 text-white font-bold shadow-sm"
+                          : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+              <div className="relative">
+                <input
+                  type="date"
+                  value={filterDate}
+                  onChange={(event) => setFilterDate(event.target.value)}
+                  className={`${controlClass} text-foreground cursor-pointer pr-8`}
+                  style={{ colorScheme: "dark" }}
+                />
+                {filterDate && (
+                  <button
+                    onClick={() => setFilterDate("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-white hover:bg-accent transition"
+                    title="清除日期筛选，显示全部任务"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                )}
+              </div>
+            </>
           )}
-          <div className="relative">
-            <input
-              type="date"
-              value={filterDate}
-              onChange={(event) => setFilterDate(event.target.value)}
-              className={`${controlClass} text-foreground cursor-pointer pr-8`}
-              style={{ colorScheme: "dark" }}
-            />
-            {filterDate && (
-              <button
-                onClick={() => setFilterDate("")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-white hover:bg-accent transition"
-                title="清除日期筛选，显示全部任务"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
           <div ref={statusDropdownRef} className="relative min-w-[140px]">
             <button
               type="button"
