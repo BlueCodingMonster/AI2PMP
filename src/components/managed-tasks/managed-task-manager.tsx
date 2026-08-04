@@ -1238,7 +1238,8 @@ export default function ManagedTaskManager({ tasks, calendars, context, isDeptMa
   const versionOptions = form.versionType === "PRODUCT" ? context.versions.products : form.versionType === "PROJECT" ? context.versions.projects : [];
   const editingTask = editingId ? tasks.find((t) => t.id === editingId) : null;
   const hasChildren = editingTask ? editingTask.children.length > 0 : false;
-  const warnings = tasks.flatMap((task) => {
+  const warnings = filteredTasks.flatMap((task) => {
+    if (task.canManage === false) return [];
     const list: string[] = [];
     if (task.children.length === 0 && !task.executorId) list.push(`${task.title}：未分配执行人`);
     if (!task.planStartDate || !task.planEndDate) list.push(`${task.title}：排期不完整`);
